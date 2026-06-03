@@ -1293,15 +1293,43 @@ function restoreUploadStatus() {
   if (ld.dbfFileName) {
     const dates = Object.keys(ld.dbfDailyOz).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
     el.style.display = 'block';
-    el.innerHTML = `<span class="status-dot dot-ok"></span>
-      <strong>${state.location} — Loaded:</strong> ${ld.dbfFileName} &nbsp;|&nbsp;
-      <strong>Date range:</strong> ${ld.dbfDateRange?.from} → ${ld.dbfDateRange?.to} &nbsp;|&nbsp;
-      <strong>${dates.length}</strong> days of sales data`;
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <span>
+          <span class="status-dot dot-ok"></span>
+          <strong>${state.location} — Loaded:</strong> ${ld.dbfFileName} &nbsp;|&nbsp;
+          <strong>Date range:</strong> ${ld.dbfDateRange?.from} → ${ld.dbfDateRange?.to} &nbsp;|&nbsp;
+          <strong>${dates.length}</strong> days of sales data
+        </span>
+        <button id="delete-dbf-btn" onclick="clearDbf()"
+          style="background:#c0392b;color:white;border:none;border-radius:6px;padding:6px 14px;
+                 font-size:13px;font-weight:bold;cursor:pointer;white-space:nowrap">
+          🗑 Delete DBF
+        </button>
+      </div>`;
     if (summaryDiv) showDateSummary(ld.dbfDailyOz, dates);
   } else {
     el.style.display = 'none';
     if (summaryDiv) summaryDiv.style.display = 'none';
   }
+}
+
+function clearDbf() {
+  if (!confirm(`Delete the DBF file for ${state.location}? This will clear all loaded sales data for this location.`)) return;
+  const ld = locData();
+  ld.dbfDailyOz     = {};
+  ld.dbfUploadDate  = null;
+  ld.dbfFileName    = null;
+  ld.dbfDateRange   = null;
+  ld.refDateOverride = null;
+  saveState(state);
+  restoreUploadStatus();
+  renderDbfBanner();
+  renderDrinkInputs();
+  // Reset file input so the same file can be re-uploaded if needed
+  const fi = document.getElementById('file-input');
+  if (fi) fi.value = '';
+  showToast(`🗑 DBF data cleared for ${state.location}`);
 }
 restoreUploadStatus();
 </script>
