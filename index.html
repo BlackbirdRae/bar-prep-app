@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bar Daily Prep</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --red:    #8B0000;
+    --red2:   #a80000;
+    --gold:   #c9933a;
+    --bg:     #f2f2f2;
+    --card:   #ffffff;
+    --border: #ddd;
+    --text:   #1a1a1a;
+    --muted:  #666;
+    --green:  #1a7a32;
+    --blue:   #1a4a8a;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ── Header ─────────────────────────────────────────────── */
+  header {
+    background: var(--red); color: white;
+    padding: 0 24px; display: flex; align-items: center;
+    justify-content: space-between; height: 60px;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 20px; letter-spacing: 0.5px; white-space: nowrap; }
+  .location-select {
+    background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.4);
+    color: white; padding: 6px 26px 6px 10px; border-radius: 5px;
+    font-size: 15px; font-weight: bold; cursor: pointer;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(255,255,255,0.8)'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center; min-width: 70px;
+  }
+  .location-select option { background: var(--red); }
+  header .date-badge {
+    background: rgba(255,255,255,0.15); padding: 5px 14px;
+    border-radius: 20px; font-size: 13px; white-space: nowrap;
+  }
+
+  /* ── Nav ─────────────────────────────────────────────────── */
+  nav { background: var(--red2); display: flex; padding: 0 16px; border-bottom: 2px solid rgba(255,255,255,0.15); }
+  nav button {
+    background: none; border: none; color: rgba(255,255,255,0.7);
+    padding: 12px 20px; font-size: 14px; cursor: pointer;
+    border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.15s;
+  }
+  nav button:hover { color: white; }
+  nav button.active { color: white; border-bottom-color: var(--gold); font-weight: bold; }
+
+  /* ── Pages ───────────────────────────────────────────────── */
+  .page { display: none; max-width: 980px; margin: 24px auto; padding: 0 20px 40px; }
+  .page.active { display: block; }
+
+  /* ── Card ────────────────────────────────────────────────── */
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: 0 1px 5px rgba(0,0,0,0.1); padding: 20px 24px; margin-bottom: 20px; }
+  .card h2 { font-size: 16px; color: var(--red); margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+
+  /* ── DBF Status Banner ───────────────────────────────────── */
+  .dbf-banner {
+    border-radius: var(--radius); padding: 10px 16px; margin-bottom: 16px;
+    font-size: 13px; display: flex; align-items: center; gap: 10px;
+  }
+  .dbf-banner.loaded { background: #f0fef3; border: 1px solid #80c880; color: #1a7a32; }
+  .dbf-banner.missing { background: #fffbf0; border: 1px solid #e5c96a; color: #9a7200; }
+  .dbf-ref { font-weight: bold; }
+
+  /* ── Drink Grid ──────────────────────────────────────────── */
+  .drink-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .drink-card { background: var(--card); border: 2px solid var(--border); border-radius: var(--radius); padding: 14px 16px; transition: border-color 0.15s; }
+  .drink-card:focus-within { border-color: var(--red); }
+  .drink-card .drink-name { font-size: 13px; font-weight: bold; color: var(--text); margin-bottom: 6px; line-height: 1.3; min-height: 32px; }
+  .drink-card .drink-usage { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+  .drink-card label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
+  .drink-card input[type=number] { width: 100%; padding: 9px 12px; font-size: 18px; font-weight: bold; border: 1px solid var(--border); border-radius: 5px; text-align: center; background: #fafafa; }
+  .drink-card input[type=number]:focus { outline: none; border-color: var(--red); background: white; }
+
+  /* ── Buttons ─────────────────────────────────────────────── */
+  .btn { display: inline-block; padding: 11px 28px; border-radius: 5px; border: none; font-size: 15px; font-weight: bold; cursor: pointer; transition: background 0.15s; }
+  .btn-primary { background: var(--red); color: white; }
+  .btn-primary:hover { background: var(--red2); }
+  .btn-secondary { background: #555; color: white; }
+  .btn-secondary:hover { background: #333; }
+  .btn-outline { background: white; color: var(--red); border: 2px solid var(--red); }
+  .btn-outline:hover { background: #fdf0f0; }
+  .btn-sm { padding: 7px 16px; font-size: 13px; }
+  .btn-reset { background: #eee; color: #555; border: 1px solid #ccc; font-size: 13px; padding: 7px 14px; border-radius: 5px; cursor: pointer; }
+  .btn-reset:hover { background: #e0e0e0; }
+  .row-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+
+  /* ── Results ─────────────────────────────────────────────── */
+  #results { margin-top: 10px; }
+  .result-banner { border-radius: var(--radius); padding: 14px 20px; margin-bottom: 16px; font-weight: bold; font-size: 15px; }
+  .banner-make { background: #fef0f0; border: 2px solid #e08080; color: var(--red); }
+  .banner-ok   { background: #f0fef3; border: 2px solid #80c880; color: var(--green); }
+  .result-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .result-table th { background: var(--red); color: white; padding: 10px 12px; text-align: left; }
+  .result-table td { padding: 10px 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
+  .result-table tr:nth-child(even) td { background: #fafafa; }
+  .result-table tr.need-make td { background: #fff8f8; }
+  .result-table tr.need-make:nth-child(even) td { background: #fff0f0; }
+  .badge-make { background: var(--red); color: white; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; white-space: nowrap; }
+  .badge-ok   { background: var(--green); color: white; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+  .batch-list { font-size: 13px; line-height: 1.9; }
+  .batch-line strong { color: var(--red); font-size: 15px; }
+  .batch-line.suggested {
+    background: #fff3cd; border: 1px solid var(--gold);
+    border-radius: 5px; padding: 3px 10px; margin: 2px 0;
+    display: inline-block; font-weight: bold;
+  }
+  .batch-line.suggested strong { color: #7a5000; font-size: 15px; }
+  .batch-line.suggested .suggested-tag {
+    font-size: 10px; background: var(--gold); color: white;
+    border-radius: 8px; padding: 1px 6px; margin-left: 6px;
+    vertical-align: middle; font-weight: bold; letter-spacing: 0.3px;
+  }
+  .batch-line.other { color: #999; font-size: 12px; }
+
+  /* ── Batch size locked/editable rows ─────────────────────── */
+  .batch-row-locked input {
+    background: #f4f4f4; color: #aaa; border-color: #e0e0e0;
+    cursor: not-allowed; pointer-events: none;
+  }
+  .batch-row-editable { background: #fffbf0; }
+  .batch-row-editable td:first-child::after {
+    content: ' ✏'; font-size: 11px; color: var(--gold); font-weight: bold;
+  }
+
+  /* ── Upload ──────────────────────────────────────────────── */
+  .upload-zone { border: 3px dashed var(--border); border-radius: var(--radius); padding: 40px; text-align: center; cursor: pointer; transition: all 0.15s; background: #fafafa; }
+  .upload-zone:hover, .upload-zone.drag-over { border-color: var(--red); background: #fdf5f5; }
+  .upload-zone .upload-icon { font-size: 48px; margin-bottom: 12px; }
+  .upload-zone p { color: var(--muted); font-size: 14px; margin-top: 6px; }
+  #file-input { display: none; }
+  .progress-bar { width: 100%; height: 6px; background: #eee; border-radius: 3px; margin-top: 16px; overflow: hidden; display: none; }
+  .progress-fill { height: 100%; background: var(--red); border-radius: 3px; transition: width 0.3s; }
+
+  /* ── Settings Tables ─────────────────────────────────────── */
+  table.settings-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.settings-table th { background: #f5f5f5; padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); border: 1px solid var(--border); text-align: center; }
+  table.settings-table th:first-child { text-align: left; }
+  table.settings-table td { padding: 7px 10px; border: 1px solid var(--border); text-align: center; vertical-align: middle; }
+  table.settings-table td:first-child { text-align: left; }
+  table.settings-table input[type=number] { width: 70px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 3px; text-align: center; font-size: 13px; }
+  table.settings-table input[type=text]   { width: 180px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 3px; font-size: 13px; }
+  table.settings-table input:focus { outline: none; border-color: var(--red); }
+  .fixed-name { font-size: 13px; font-weight: bold; }
+  .fixed-tag  { font-size: 10px; color: var(--muted); background: #eee; border-radius: 8px; padding: 1px 7px; margin-left: 5px; }
+
+  /* ── Admin Lock ──────────────────────────────────────────── */
+  .admin-locked-box {
+    text-align: center; padding: 28px 20px; background: #f8f8f8;
+    border-radius: var(--radius); border: 1px dashed #ccc;
+  }
+  .admin-locked-box .lock-icon { font-size: 36px; margin-bottom: 10px; }
+  .admin-locked-box h3 { font-size: 15px; color: #444; margin-bottom: 6px; }
+  .admin-locked-box p { font-size: 13px; color: #888; margin-bottom: 18px; }
+  .admin-unlocked-wrap {
+    border: 2px solid var(--gold); border-radius: var(--radius);
+    padding: 16px; background: #fffdf5;
+  }
+  .admin-toolbar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 14px; padding-bottom: 12px;
+    border-bottom: 1px solid #e8d9b0;
+  }
+  .admin-toolbar span { font-size: 12px; color: #9a7200; font-weight: bold; flex: 1; }
+  .btn-admin-lock { background: #fff3cd; color: #9a7200; border: 1px solid #e0c060; font-size: 13px; padding: 6px 14px; border-radius: 5px; cursor: pointer; }
+  .btn-admin-lock:hover { background: #ffe8a0; }
+  .btn-admin-pwd  { background: none; color: #777; border: 1px solid #ccc; font-size: 12px; padding: 5px 12px; border-radius: 5px; cursor: pointer; }
+  .btn-admin-pwd:hover { background: #f0f0f0; }
+
+  /* ── Misc ────────────────────────────────────────────────── */
+  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .info-box { background: #fffbf0; border: 1px solid #e5c96a; border-radius: 6px; padding: 12px 16px; font-size: 13px; color: #555; margin-bottom: 16px; }
+  .info-box strong { color: #9a7200; }
+  .last-upload-info { font-size: 13px; color: var(--muted); margin-top: 16px; padding: 10px 14px; background: #f8f8f8; border-radius: 5px; }
+  .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+  .dot-ok { background: var(--green); }
+
+  /* ── Toast ───────────────────────────────────────────────── */
+  #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #222; color: white; padding: 10px 24px; border-radius: 24px; font-size: 14px; display: none; z-index: 999; box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+
+  /* ── Print ───────────────────────────────────────────────── */
+  #print-area { display: none; }
+  @media print {
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body > *:not(#print-area) { display: none !important; }
+    #print-area { display: block !important; font-family: Arial, sans-serif; padding: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <span style="font-size:22px">🍹</span>
+    <select id="location-select" class="location-select" onchange="changeLocation(this.value)">
+      <option value="WG">WG</option>
+      <option value="BV">BV</option>
+      <option value="CPT">CPT</option>
+      <option value="CMP">CMP</option>
+    </select>
+    <h1 id="app-title">Daily Bar Prep</h1>
+    <span id="sync-status" title="Cloud sync status" style="font-size:14px;margin-left:8px;vertical-align:middle">⚪</span>
+  </div>
+  <div class="date-badge" id="header-date">Loading…</div>
+</header>
+
+<nav>
+  <button class="active" onclick="showPage('prep',event)">Tonight's Prep</button>
+  <button onclick="showPage('upload',event)">Upload DBF File</button>
+  <button onclick="showPage('settings',event)">Settings</button>
+</nav>
+
+<!-- ══ TONIGHT'S PREP ══════════════════════════════════════════ -->
+<div id="prep-page" class="page active">
+
+  <div id="dbf-status-banner"></div>
+
+  <div class="card">
+    <h2>📋 Enter Tonight's Inventory</h2>
+    <p class="hint" style="margin-bottom:16px">Count each item and enter how many <strong>quarts</strong> you currently have on hand.</p>
+    <div class="drink-grid" id="drink-inputs"></div>
+    <div class="row-actions">
+      <button class="btn btn-primary" onclick="calculate()">⚡ Calculate Prep List</button>
+      <button class="btn-reset" onclick="clearInputs()">Clear All</button>
+    </div>
+  </div>
+
+  <div id="results" style="display:none">
+    <div class="card">
+      <h2>📊 Tonight's Prep Results</h2>
+      <div id="result-content"></div>
+      <div style="margin-top:18px" class="no-print">
+        <button class="btn btn-outline btn-sm" onclick="window.print()">🖨️ Print This List</button>
+        <button class="btn btn-secondary btn-sm" style="margin-left:10px" onclick="document.getElementById('results').style.display='none'">✕ Clear</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ UPLOAD DBF ═══════════════════════════════════════════════ -->
+<div id="upload-page" class="page">
+  <div class="card">
+    <h2>📁 Upload DBF File (ITMSALES)</h2>
+    <div class="info-box">
+      <strong>When to upload:</strong> Once a week after exporting your weekly sales data from your POS system.
+      Upload the <code>ITMSALES.xlsx</code> file and the app will automatically calculate
+      daily usage from the <strong>same day last week</strong> — so Monday prep uses last Monday's sales, Tuesday uses last Tuesday's, and so on.
+    </div>
+
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+      <div class="upload-icon">📊</div>
+      <strong>Click to select ITMSALES.xlsx</strong>
+      <p>or drag and drop it here</p>
+      <p style="margin-top:8px;font-size:12px">File should contain the ITMSALES sheet with STORE, DATE, INV_NUM, COUNTS columns</p>
+    </div>
+    <input type="file" id="file-input" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
+
+    <div class="progress-bar" id="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    <div id="upload-status" class="last-upload-info" style="display:none"></div>
+
+    <div id="dbf-date-summary" style="display:none;margin-top:16px"></div>
+  </div>
+
+  <div class="card">
+    <h2>ℹ️ How the DBF File Works</h2>
+    <ol style="font-size:14px;line-height:2;padding-left:20px;color:#444">
+      <li>Export your weekly sales data from your POS system as <code>ITMSALES.xlsx</code>.</li>
+      <li>Upload it here — the app reads every item sold each day and calculates how much of each drink base was used.</li>
+      <li>Each night when you calculate prep, the app automatically looks up <strong>the same day from the previous week</strong> to determine usage (e.g., tonight is Tuesday → app uses last Tuesday's sales).</li>
+      <li>Safety stock is always added on top to make sure there's enough product for opening the next day.</li>
+      <li>Upload a fresh file each week when new POS data is available.</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ══ SETTINGS ════════════════════════════════════════════════ -->
+<div id="settings-page" class="page">
+  <div class="card">
+    <h2>⚙️ Drink Names &amp; Daily Usage</h2>
+    <p class="hint" style="margin-bottom:14px">
+      Edit drink names here. The <strong>Industrial Strength Margarita</strong> name is permanent.
+      Daily usage is calculated automatically from the DBF file — values shown here are the last computed usage and update each night based on last week's same-day sales.
+    </p>
+    <div id="usage-settings"></div>
+  </div>
+
+  <div class="card">
+    <h2>🛡️ Safety Stock (quarts)</h2>
+    <p class="hint" style="margin-bottom:14px">Minimum quarts to keep on hand as a buffer for opening the next day. Applied every night on top of the daily usage when calculating how much to make.</p>
+    <div id="safety-settings"></div>
+  </div>
+
+  <div class="card">
+    <h2>🥣 Batch Sizes (quarts per batch)</h2>
+    <p class="hint" style="margin-bottom:14px">The size (in quarts) of each batch option. Leave blank if a size doesn't apply to that drink.</p>
+    <div id="batch-settings"></div>
+  </div>
+
+  <div style="margin-bottom:16px">
+    <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
+    <button class="btn btn-outline" style="margin-left:10px" onclick="resetToDefaults()">↺ Reset to Defaults</button>
+  </div>
+</div>
+
+<div id="print-area"></div>
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// TRANSFER SHEET MAPPING
+// Extracted directly from the Transfer Sheet formulas.
+// Each entry: which INV_NUMs contribute how many oz to which drink bases.
+// Drink IDs match the DRINKS array order (except 'marg' is separate).
+// ══════════════════════════════════════════════════════════════
+const ITEM_DRINK_MAP = [
+  // 5oz Swirl Flights (Transfer Sheet: marg=10.5, sangria=1.5, paradise=1.5, premium=1.5)
+  {invNums:[4170,4896,4420,4996], drinkOz:{marg:10.5,  sangria:1.5, paradise:1.5, rotating:1.5}},
+  // 5oz Craft Flights
+  {invNums:[4171,4897,4421,4997], drinkOz:{marg:10.5,  rotating:2,  manhattan:2}},
+  // 8oz Swirl - Industrial Flights (verified: marg=18, sangria=2, paradise=2, premium=2)
+  {invNums:[4184,4434],           drinkOz:{marg:18,    sangria:2,   paradise:2,  rotating:2}},
+  // 8oz Craft - Industrial Flights (0 sold; components estimated)
+  {invNums:[8185,4435],           drinkOz:{marg:18,    paradise:2,  rotating:2,  manhattan:2}},
+  // 8oz Blended (verified: marg=8)
+  {invNums:[1901,1951],           drinkOz:{marg:8}},
+  // 12oz Blended (verified: marg=12)
+  {invNums:[4001,4801,4201,4901], drinkOz:{marg:12}},
+  // 16oz Blended (verified: marg=16)
+  {invNums:[4002,4802,4202,4902], drinkOz:{marg:16}},
+  // 12oz Aqua Fresca (verified: marg=9)
+  {invNums:[4179,4823,4429,4929], drinkOz:{marg:9}},
+  // 16oz Aqua Fresca (verified: marg=12)
+  {invNums:[4180,4824,4430,4930], drinkOz:{marg:12}},
+  // 16oz Zero Proof (verified: zerop=16)
+  {invNums:[2367,2368],           drinkOz:{zerop:16}},
+  // 12oz Low Proof (verified: marg=9)
+  {invNums:[4182,4432],           drinkOz:{marg:9}},
+  // 16oz Low Proof (verified: marg=12)
+  {invNums:[4183,4433],           drinkOz:{marg:12}},
+  // 8oz Paradise Swirl - Crathco (verified: marg=6, paradise=2)
+  {invNums:[1902,1952],           drinkOz:{marg:6,     paradise:2}},
+  // 12oz Paradise Swirl (verified: marg=9, paradise=3)
+  {invNums:[4004,4804,4204,4904], drinkOz:{marg:9,     paradise:3}},
+  // 16oz Paradise Swirl (verified: marg=12, paradise=4)
+  {invNums:[4005,4805,4205,4905], drinkOz:{marg:12,    paradise:4}},
+  // 8oz Sangria Swirl - Crathco (verified: marg=6, sangria=2)
+  {invNums:[1903,1953],           drinkOz:{marg:6,     sangria:2}},
+  // 12oz Sangria Swirl (verified: marg=9, sangria=3)
+  {invNums:[4007,4807,4207,4907], drinkOz:{marg:9,     sangria:3}},
+  // 16oz Sangria Swirl (verified: marg=12, sangria=4)
+  {invNums:[4008,4808,4208,4908], drinkOz:{marg:12,    sangria:4}},
+  // 8oz Sunrise Swirl - Crathco (verified: marg=6, sangria=1.5, paradise=1)
+  {invNums:[1904,1954],           drinkOz:{marg:6,     sangria:1.5, paradise:1}},
+  // 12oz Sunrise Swirl (verified: marg=9, sangria=1.5, paradise=1.5)
+  {invNums:[4010,4810,4210,4910], drinkOz:{marg:9,     sangria:1.5, paradise:1.5}},
+  // 16oz Sunrise Swirl (verified: marg=12, sangria=2, paradise=2)
+  {invNums:[4011,4811,4211,4911], drinkOz:{marg:12,    sangria:2,   paradise:2}},
+  // 16oz Chavela Swirl (verified: marg=5.5, hornitos=2)
+  {invNums:[4012,4812,4212,4912], drinkOz:{marg:5.5,   hornitos:2}},
+  // 8oz Hornitos/Cadillac Swirl - Crathco (verified: marg=6, hornitos=2)
+  {invNums:[1905,1955],           drinkOz:{marg:6,     hornitos:2}},
+  // 12oz Hornitos/Cadillac Swirl (verified: marg=9, hornitos=3)
+  {invNums:[4014,4814,4214,4914], drinkOz:{marg:9,     hornitos:3}},
+  // 16oz Hornitos/Cadillac Swirl (verified: marg=12, hornitos=4)
+  {invNums:[4015,4815,4215,4915], drinkOz:{marg:12,    hornitos:4}},
+  // 8oz Premium Special Swirl (verified: marg=6, rotating=2)
+  {invNums:[1906,1956],           drinkOz:{marg:6,     rotating:2}},
+  // 12oz Premium/Monthly Special Swirl (verified: marg=9, rotating=3)
+  {invNums:[4017,4817,4217,4917], drinkOz:{marg:9,     rotating:3}},
+  // 16oz Premium/Monthly Special Swirl (verified: marg=12, rotating=4)
+  {invNums:[4018,4818,4218,4918], drinkOz:{marg:12,    rotating:4}},
+  // 12oz Rotating Special (Tito's Peach) Swirl (verified: marg=9, rotating=3)
+  {invNums:[4026,4820,4232,4920], drinkOz:{marg:9,     rotating:3}},
+  // 16oz Rotating Special (Tito's Peach) Swirl (verified: marg=12, rotating=4)
+  {invNums:[4027,4821,4233,4921], drinkOz:{marg:12,    rotating:4}},
+  // 12oz Weekend Swirl (verified: marg=9, weekend=3)
+  {invNums:[4050,4256],           drinkOz:{marg:9,     weekend:3}},
+  // 16oz Weekend Swirl (verified: marg=12, weekend=4)
+  {invNums:[4051,4257],           drinkOz:{marg:12,    weekend:4}},
+  // 8oz Manhattan Craft - Crathco (verified: marg=8, manhattan=3)
+  {invNums:[1908,1958],           drinkOz:{marg:8,     manhattan:3}},
+  // 12oz Manhattan Craft (verified: marg=8, manhattan=4)
+  {invNums:[4080,4876,4300,4976], drinkOz:{marg:8,     manhattan:4}},
+  // 16oz Manhattan Craft (verified: marg=11, manhattan=5)
+  {invNums:[4081,4877,4301,4977], drinkOz:{marg:11,    manhattan:5}},
+  // 12oz Hornitos Rocks (hornitos only, no marg base)
+  {invNums:[4096,4321],           drinkOz:{hornitos:7}},
+  // 16oz Hornitos Rocks
+  {invNums:[4097,4322],           drinkOz:{hornitos:9}},
+  // 12oz Hornitos Rocks No Ice
+  {invNums:[4099,4324],           drinkOz:{hornitos:15.5}},
+  // 16oz Hornitos Rocks No Ice
+  {invNums:[4100,4325],           drinkOz:{hornitos:15.5}},
+  // 12oz Sangria Rocks (sangria only, no marg base)
+  {invNums:[4102,4327],           drinkOz:{sangria:9}},
+  // 16oz Sangria Rocks
+  {invNums:[4103,4328],           drinkOz:{sangria:13}},
+  // 12oz Sangria Rocks No Ice
+  {invNums:[4105,4330],           drinkOz:{sangria:15.5}},
+  // 16oz Sangria Rocks No Ice
+  {invNums:[4106,4331],           drinkOz:{sangria:15.5}},
+  // 12oz POG (verified: marg=9)
+  {invNums:[4223,4926],           drinkOz:{marg:9}},
+  // 16oz POG (verified: marg=12)
+  {invNums:[4224,4927],           drinkOz:{marg:12}},
+  // 12oz Strawberry (verified: marg=9)
+  {invNums:[4226,4923],           drinkOz:{marg:9}},
+  // 16oz Strawberry (verified: marg=12)
+  {invNums:[4227,4924],           drinkOz:{marg:12}},
+  // HM Ketel Cosmo
+  {invNums:[4540],                drinkOz:{marg:9.5}},
+  // HM Lemon Drop
+  {invNums:[4542],                drinkOz:{marg:12}},
+  // HM Manhattan
+  {invNums:[4543],                drinkOz:{marg:11.5}},
+  // HM Cucumber Mint
+  {invNums:[4551],                drinkOz:{marg:11.25}},
+  // HM Prickley Pear Lemon
+  {invNums:[4552],                drinkOz:{marg:11.25}},
+  // HM Hennessy Sidecar
+  {invNums:[4553],                drinkOz:{marg:11.75}},
+  // HM 21 Seeds Valencia
+  {invNums:[4554],                drinkOz:{marg:10.75}},
+  // HM Gran Centenario Raspberry
+  {invNums:[4555],                drinkOz:{marg:9.25}},
+];
+
+// Build fast lookup: invNum → drinkOz
+const INV_LOOKUP = {};
+ITEM_DRINK_MAP.forEach(({invNums, drinkOz}) => {
+  invNums.forEach(n => { INV_LOOKUP[n] = drinkOz; });
+});
+
+// Map drink IDs to DRINKS array columns
+const DRINK_ID_TO_COL = {
+  marg:'C', hornitos:'D', sangria:'E', paradise:'F',
+  rotating:'G', weekend:'I', manhattan:'J', zerop:'K'
+};
+
+// ══════════════════════════════════════════════════════════════
+// DEFAULT DRINK CONFIG
+// ══════════════════════════════════════════════════════════════
+const DEFAULT_DRINKS = [
+  {col:'C', id:'marg',      name:'Industrial Strength Margarita', fixed:true,  usageOz:0, batches:{xl:23.12}},
+  {col:'D', id:'hornitos',  name:'Crathco Hornitos / Cadillac',   fixed:false, usageOz:0, batches:{small:2.30, medium:4.59, large:9.19, xl:18.38}},
+  {col:'E', id:'sangria',   name:'Crathco Sangria',               fixed:false, usageOz:0, batches:{small:4.13, medium:8.25, large:16.50}},
+  {col:'F', id:'paradise',  name:'Crathco Paradise Swirl',        fixed:false, usageOz:0, batches:{small:2.69, medium:5.38, large:10.75, xl:21.50}},
+  {col:'G', id:'rotating',  name:'Crathco Rotating Special',      fixed:false, usageOz:0, batches:{small:1.48, medium:2.97, large:5.94}},
+  {col:'I', id:'weekend',   name:'Stor N Pour Weekend Special',   fixed:false, usageOz:0, batches:{small:1.51, medium:3.03, large:6.06}},
+  {col:'J', id:'manhattan', name:'Stor N Pour Manhattan Craft',   fixed:false, usageOz:0, batches:{small:1.69, medium:3.38, large:6.75}},
+  {col:'K', id:'zerop',     name:'Machine Zero / Low Proof',      fixed:false, usageOz:0, batches:{large:8.59}},
+];
+
+// Safety stock by day of week (0=Sun…6=Sat), one per drink in DEFAULT_DRINKS order
+const DEFAULT_SAFETY = [
+  [69.36, 4, 4, 4, 4, 0, 1, 6], // Sun
+  [69.36, 4, 4, 4, 4, 0, 1, 6], // Mon
+  [69.36, 4, 4, 4, 4, 0, 1, 6], // Tue
+  [69.36, 4, 4, 4, 4, 0, 1, 6], // Wed
+  [69.36, 4, 4, 4, 4, 0, 1, 6], // Thu
+  [69.36, 4, 4, 4, 4, 0, 1, 6], // Fri
+  [69.36, 4, 4, 4, 4, 0, 1, 6], // Sat
+];
+
+const LOCATIONS    = ['WG','BV','CPT','CMP'];
+const BATCH_LABELS = {small:'Small', medium:'Medium', large:'Large', xl:'XL'};
+const DAYS         = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DAYS_SHORT   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+// ══════════════════════════════════════════════════════════════
+// SUPABASE — live sync across all locations
+// ══════════════════════════════════════════════════════════════
+const SUPABASE_URL  = 'https://dtwokxdivxgrgwvubyqc.supabase.co';
+const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0d29reGRpdnhncmd3dnVieXFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MTc3ODQsImV4cCI6MjA5MTA5Mzc4NH0.1nTPPy-h6rYrDrHTT7rXBuJWYDc5jx719w1j0psfr_M';
+const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Show a small sync indicator in the page title
+function setSyncStatus(status) {
+  const icons = { ok:'🟢', saving:'🔄', error:'🔴', offline:'⚪' };
+  const el = document.getElementById('sync-status');
+  if (el) el.textContent = icons[status] || '';
+}
+
+// Push state to Supabase (background, non-blocking)
+async function pushToCloud(s) {
+  setSyncStatus('saving');
+  try {
+    const { error } = await _supa.from('bar_prep_state')
+      .upsert({ id:'main', state: s, updated_at: new Date().toISOString() });
+    if (error) throw error;
+    setSyncStatus('ok');
+  } catch(e) {
+    console.warn('Cloud sync error:', e.message);
+    setSyncStatus('error');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+function loadLocalState() {
+  try { const r = localStorage.getItem('barPrepData_v4'); return r ? JSON.parse(r) : null; }
+  catch { return null; }
+}
+function saveState(s) {
+  localStorage.setItem('barPrepData_v4', JSON.stringify(s));
+  pushToCloud(s); // sync to cloud in background
+}
+
+// ── Admin session (never persisted — resets on page close/refresh) ──────────
+let adminUnlocked = false;
+
+function emptyLocData() {
+  return { dbfDailyOz: {}, dbfUploadDate: null, dbfFileName: null, dbfDateRange: null, refDateOverride: null, lastInventory: {} };
+}
+function buildState(saved) {
+  if (saved) {
+    if (!saved.locations) saved.locations = {};
+    LOCATIONS.forEach(loc => { if (!saved.locations[loc]) saved.locations[loc] = emptyLocData(); });
+    if (!saved.adminPassword) saved.adminPassword = 'admin';
+    return saved;
+  }
+  const locations = {};
+  LOCATIONS.forEach(loc => { locations[loc] = emptyLocData(); });
+  return {
+    drinks: JSON.parse(JSON.stringify(DEFAULT_DRINKS)),
+    safety: JSON.parse(JSON.stringify(DEFAULT_SAFETY)),
+    location: 'WG',
+    locations,
+    adminPassword: 'admin',
+  };
+}
+function getState() { return buildState(loadLocalState()); }
+let state = getState();
+
+// ── Load from cloud on startup, then subscribe to live changes ──────────────
+(async () => {
+  try {
+    setSyncStatus('saving');
+    const { data, error } = await _supa.from('bar_prep_state')
+      .select('state').eq('id','main').maybeSingle();
+    if (!error && data) {
+      const currentLoc = state.location;
+      state = buildState(data.state);
+      state.location = currentLoc; // keep local location choice
+      localStorage.setItem('barPrepData_v4', JSON.stringify(state));
+      renderDrinkInputs();
+      renderSettings();
+    } else if (!data) {
+      // No cloud record yet — push our local state up
+      await pushToCloud(state);
+    }
+    setSyncStatus('ok');
+  } catch(e) {
+    console.warn('Cloud load failed, using local state:', e.message);
+    setSyncStatus('offline');
+  }
+
+  // Subscribe to realtime changes from other locations
+  _supa.channel('bar_prep_sync')
+    .on('postgres_changes', { event:'UPDATE', schema:'public', table:'bar_prep_state' }, payload => {
+      const incoming = payload.new.state;
+      if (!incoming) return;
+      const currentLoc = state.location;
+      state = buildState(incoming);
+      state.location = currentLoc;
+      localStorage.setItem('barPrepData_v4', JSON.stringify(state));
+      renderDrinkInputs();
+      renderSettings();
+      showToast('🔄 Settings updated from another location');
+    })
+    .subscribe();
+})();
+
+// Returns the data object for the currently selected location
+function locData() {
+  if (!state.locations[state.location]) state.locations[state.location] = emptyLocData();
+  return state.locations[state.location];
+}
+
+// ══════════════════════════════════════════════════════════════
+// LOCATION
+// ══════════════════════════════════════════════════════════════
+function changeLocation(loc) {
+  state.location = loc;
+  saveState(state);
+  document.getElementById('app-title').textContent = loc + ' Daily Bar Prep';
+  document.title = loc + ' Daily Bar Prep';
+  // Re-render prep inputs and banner for the new location
+  renderDrinkInputs();
+  document.getElementById('results').style.display = 'none';
+  // Refresh upload page status and date summary for the new location
+  restoreUploadStatus();
+}
+
+// ══════════════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════════════
+function showPage(id, evt) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(id + '-page').classList.add('active');
+  if (evt && evt.currentTarget) evt.currentTarget.classList.add('active');
+  if (id === 'settings') renderSettings();
+}
+
+// ══════════════════════════════════════════════════════════════
+// FIND REFERENCE DATE (same day last week)
+// ══════════════════════════════════════════════════════════════
+function findRefDate(today) {
+  const ld = locData();
+  const available = Object.keys(ld.dbfDailyOz).sort();
+  if (!available.length) return null;
+
+  // Manual override takes priority
+  if (ld.refDateOverride && ld.dbfDailyOz[ld.refDateOverride]) {
+    return {date: ld.refDateOverride, exact: false, manual: true};
+  }
+
+  const dow = today.getDay(); // 0=Sun…6=Sat
+
+  // First try exact 7 days ago
+  const target = new Date(today);
+  target.setDate(target.getDate() - 7);
+  const targetStr = target.toISOString().slice(0,10);
+  if (ld.dbfDailyOz[targetStr]) return {date: targetStr, exact: true};
+
+  // Fall back: most recent date in the file that has the same day of week
+  const sameDow = available.filter(d => new Date(d+'T12:00:00').getDay() === dow);
+  if (sameDow.length) return {date: sameDow[sameDow.length-1], exact: false};
+
+  // Last resort: use most recent date
+  return {date: available[available.length-1], exact: false};
+}
+
+// Returns what the auto date would be (ignores override) — used to label the Auto option
+function findAutoRefDate(today) {
+  const ld = locData();
+  const dow = today.getDay();
+  const available = Object.keys(ld.dbfDailyOz).sort();
+  if (!available.length) return null;
+  const target = new Date(today);
+  target.setDate(target.getDate() - 7);
+  const targetStr = target.toISOString().slice(0,10);
+  if (ld.dbfDailyOz[targetStr]) return {date: targetStr, exact: true};
+  const sameDow = available.filter(d => new Date(d+'T12:00:00').getDay() === dow);
+  if (sameDow.length) return {date: sameDow[sameDow.length-1], exact: false};
+  return {date: available[available.length-1], exact: false};
+}
+
+function changeRefDate(val) {
+  locData().refDateOverride = val || null;
+  saveState(state);
+  renderDrinkInputs(); // also re-renders banner
+}
+
+function getUsageOzFromDBF(refDate) {
+  return locData().dbfDailyOz[refDate] || null;
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER DRINK INPUT GRID
+// ══════════════════════════════════════════════════════════════
+function renderDbfBanner() {
+  const banner = document.getElementById('dbf-status-banner');
+  const ld = locData();
+  if (!ld.dbfFileName) {
+    banner.className = 'dbf-banner missing';
+    banner.innerHTML = `⚠️ No DBF file uploaded for <strong>${state.location}</strong> yet. <a href="#" onclick="showPage('upload',event);return false" style="color:#9a7200">Upload ITMSALES.xlsx</a> to get usage from last week's sales. Until then, safety stock alone drives the prep calculation.`;
+  } else {
+    const autoRef = findAutoRefDate(new Date());
+    const autoLabel = autoRef
+      ? `Auto — ${autoRef.date} (${DAYS[new Date(autoRef.date+'T12:00:00').getDay()]})`
+      : 'Auto';
+
+    // Build date options from DBF data, most recent first (filter out any bad keys)
+    const available = Object.keys(ld.dbfDailyOz)
+      .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
+      .sort().reverse();
+    let optionsHtml = `<option value="">${autoLabel}</option>`;
+    available.forEach(d => {
+      const dayName = DAYS[new Date(d+'T12:00:00').getDay()];
+      optionsHtml += `<option value="${d}">${dayName}, ${d}</option>`;
+    });
+
+    const isManual = !!ld.refDateOverride;
+    const manualNote = isManual
+      ? `<span style="font-size:12px;font-weight:bold;color:#c97200;margin-left:6px">⚡ Manual override active</span>`
+      : '';
+
+    banner.className = 'dbf-banner loaded';
+    banner.style.flexWrap = 'wrap';
+    banner.style.gap = '6px';
+    banner.innerHTML = `
+      <span>✅ <strong>${state.location}</strong> DBF: <strong>${ld.dbfFileName}</strong></span>
+      <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <span style="font-size:12px;color:#444">Reference date:</span>
+        <select id="ref-date-select"
+          style="font-size:13px;padding:5px 28px 5px 10px;border:1px solid #80c880;border-radius:4px;background:white;color:#1a1a1a;cursor:pointer;min-width:240px;max-width:320px">
+          ${optionsHtml}
+        </select>
+        ${manualNote}
+        ${isManual ? `<button id="reset-ref-btn" style="font-size:11px;padding:2px 8px;background:none;border:1px solid #aaa;border-radius:3px;cursor:pointer;color:#555">✕ Reset to auto</button>` : ''}
+      </span>`;
+
+    // Set value and wire up events AFTER innerHTML (inline onchange is unreliable on re-renders)
+    const sel = document.getElementById('ref-date-select');
+    if (sel) {
+      sel.value = ld.refDateOverride || '';
+      sel.addEventListener('change', function() {
+        changeRefDate(this.value);
+      });
+    }
+    const resetBtn = document.getElementById('reset-ref-btn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function() {
+        changeRefDate('');
+      });
+    }
+  }
+}
+
+function renderDrinkInputs() {
+  const grid = document.getElementById('drink-inputs');
+  grid.innerHTML = '';
+  const ref = findRefDate(new Date());
+  const ozData = ref ? getUsageOzFromDBF(ref.date) : null;
+
+  state.drinks.forEach(d => {
+    const last = locData().lastInventory[d.col] ?? '';
+    const oz   = ozData ? (ozData[d.id] || 0) : d.usageOz;
+    const qt   = (oz / 32).toFixed(2);
+    const manualTag = (ref && ref.manual) ? ' ⚡' : '';
+    const usageLabel = ozData
+      ? `Usage (${ref.date}${manualTag}): ${oz.toFixed(1)} oz / ${qt} qt`
+      : (d.usageOz > 0 ? `Usage (stored): ${d.usageOz.toFixed(1)} oz` : 'No DBF data — upload file');
+
+    grid.innerHTML += `
+      <div class="drink-card">
+        <div class="drink-name" id="prep-name-${d.col}">${d.name}</div>
+        <div class="drink-usage">${usageLabel}</div>
+        <label>Quarts on Hand</label>
+        <input type="number" id="inv-${d.col}" min="0" step="0.25"
+               value="${last}" placeholder="0" inputmode="decimal">
+      </div>`;
+  });
+  renderDbfBanner();
+}
+
+function clearInputs() {
+  state.drinks.forEach(d => { const el = document.getElementById('inv-'+d.col); if(el) el.value=''; });
+}
+
+// ══════════════════════════════════════════════════════════════
+// CALCULATION
+// ══════════════════════════════════════════════════════════════
+function calculate() {
+  const today   = new Date();
+  const dow     = today.getDay();
+  const safety  = state.safety[dow];
+  const ref     = findRefDate(today);
+  const ozData  = ref ? getUsageOzFromDBF(ref.date) : null;
+
+  const results = state.drinks.map((d, i) => {
+    const onHand      = parseFloat(document.getElementById('inv-'+d.col).value) || 0;
+    const rawOz       = ozData ? (ozData[d.id] || 0) : d.usageOz;
+    const usageQts    = rawOz / 32;
+    const safStock    = safety[i];
+    const shortage    = onHand - usageQts - safStock;
+    const needMake    = shortage < 0;
+    const shortageAbs = needMake ? Math.abs(shortage) : 0;
+
+    const batches = {};
+    Object.entries(d.batches).forEach(([sz, sizeQts]) => {
+      if (sizeQts > 0) batches[sz] = {sizeQts, count: needMake ? Math.ceil(shortageAbs / sizeQts) : 0};
+    });
+
+    locData().lastInventory[d.col] = onHand;
+    return {...d, onHand, usageOz: rawOz, usageQts, safStock, shortage, shortageAbs, needMake, batches};
+  });
+
+  saveState(state);
+  renderResults(results, today, dow, ref);
+}
+
+function renderResults(results, today, dow, ref) {
+  const makeList = results.filter(r => r.needMake);
+  const refNote  = ref
+    ? ` | Usage from: ${ref.date} (${DAYS_SHORT[new Date(ref.date+'T12:00:00').getDay()]})${ref.manual ? ' ⚡ manual' : ''}`
+    : '';
+
+  let html = `
+    <div class="result-banner ${makeList.length ? 'banner-make':'banner-ok'}">
+      ${makeList.length
+        ? `⚠️  ${makeList.length} item(s) need to be prepped — ${DAYS[dow]}, ${today.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}${refNote}`
+        : `✅  All items are fully stocked — nothing to prep tonight!${refNote}`}
+    </div>`;
+
+  html += `<table class="result-table">
+    <thead><tr>
+      <th>Item</th><th>On Hand (qt)</th><th>Usage (qt)</th>
+      <th>Safety (qt)</th><th>Shortage (qt)</th><th>Status</th><th>Batches to Make</th>
+    </tr></thead><tbody>`;
+
+  results.forEach(r => {
+    const cls   = r.needMake ? 'need-make' : '';
+    const badge = r.needMake ? `<span class="badge-make">⚠ MAKE</span>` : `<span class="badge-ok">✓ OK</span>`;
+    const short = r.needMake ? r.shortageAbs.toFixed(2) : '—';
+    let batchHtml = '—';
+    if (r.needMake) {
+      // Find suggested batch: fewest batches needed; on a tie, pick the SMALLEST batch
+      // (iterate small→large so smallest size wins ties via strict <)
+      const sizeOrder = ['xl','large','medium','small'];
+      const suggestOrder = ['small','medium','large','xl'];
+      let minCount = Infinity, suggestedSz = null;
+      suggestOrder.forEach(sz => {
+        const b = r.batches[sz];
+        if (b && b.count > 0 && b.count < minCount) { minCount = b.count; suggestedSz = sz; }
+      });
+
+      // Show all available batch sizes; highlight the suggested one
+      const lines = sizeOrder
+        .filter(sz => r.batches[sz])
+        .map(sz => {
+          const b = r.batches[sz];
+          if (sz === suggestedSz) {
+            return `<div class="batch-line suggested">${BATCH_LABELS[sz]} (${b.sizeQts} qt) → <strong>${b.count}</strong><span class="suggested-tag">SUGGESTED</span></div>`;
+          }
+          return `<div class="batch-line other">${BATCH_LABELS[sz]} (${b.sizeQts} qt) → ${b.count}</div>`;
+        });
+      batchHtml = lines.join('') || '—';
+    }
+    html += `<tr class="${cls}">
+      <td><strong>${r.name}</strong></td>
+      <td style="text-align:center">${r.onHand.toFixed(2)}</td>
+      <td style="text-align:center">${r.usageQts.toFixed(2)}</td>
+      <td style="text-align:center">${r.safStock.toFixed(2)}</td>
+      <td style="text-align:center;font-weight:bold">${short}</td>
+      <td style="text-align:center">${badge}</td>
+      <td class="batch-list">${batchHtml}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+
+  document.getElementById('result-content').innerHTML = html;
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('results').scrollIntoView({behavior:'smooth', block:'start'});
+
+  // Build the clean print-only view
+  buildPrintArea(makeList, today, ref);
+}
+
+function buildPrintArea(makeList, today, ref) {
+  const dateStr = today.toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric'});
+  const refStr  = ref ? `Usage from: ${DAYS[new Date(ref.date+'T12:00:00').getDay()]}, ${ref.date}${ref.manual ? ' (manual)' : ''}` : '';
+
+  let rows = '';
+  if (makeList.length) {
+    const sizeOrder = ['xl','large','medium','small'];
+    const suggestOrder = ['small','medium','large','xl'];
+    makeList.forEach(r => {
+      // Determine suggested batch: fewest batches, tie goes to smallest batch size
+      let minCount = Infinity, suggestedSz = null;
+      suggestOrder.forEach(sz => {
+        const b = r.batches[sz];
+        if (b && b.count > 0 && b.count < minCount) { minCount = b.count; suggestedSz = sz; }
+      });
+
+      const batchLines = sizeOrder
+        .filter(sz => r.batches[sz])
+        .map(sz => {
+          const b = r.batches[sz];
+          if (sz === suggestedSz) {
+            return `<span style="background:#fff3cd;border:1px solid #c9933a;border-radius:4px;padding:2px 8px;font-weight:bold">${b.count} × ${BATCH_LABELS[sz]} (${b.sizeQts} qt) ★</span>`;
+          }
+          return `<span style="color:#999;font-size:13px">${b.count} × ${BATCH_LABELS[sz]} (${b.sizeQts} qt)</span>`;
+        }).join('&nbsp;&nbsp; ');
+
+      rows += `<tr>
+        <td style="padding:10px 14px;border-bottom:1px solid #ddd;font-size:15px;font-weight:bold">${r.name}</td>
+        <td style="padding:10px 14px;border-bottom:1px solid #ddd;font-size:14px">${batchLines}</td>
+      </tr>`;
+    });
+  } else {
+    rows = `<tr><td colspan="2" style="padding:16px;text-align:center;color:#555;font-size:14px">✅ All items fully stocked — nothing to prep tonight.</td></tr>`;
+  }
+
+  document.getElementById('print-area').innerHTML = `
+    <div style="border-bottom:3px solid #8B0000;padding-bottom:12px;margin-bottom:20px">
+      <div style="font-size:22px;font-weight:bold;color:#8B0000">${state.location} — Daily Bar Prep</div>
+      <div style="font-size:14px;color:#444;margin-top:4px">${dateStr}</div>
+      ${refStr ? `<div style="font-size:12px;color:#777;margin-top:2px">${refStr}</div>` : ''}
+    </div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="background:#8B0000;color:white">
+          <th style="padding:10px 14px;text-align:left;font-size:13px;width:50%">Item</th>
+          <th style="padding:10px 14px;text-align:left;font-size:13px">Batches to Make</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// FILE UPLOAD — ITMSALES.xlsx PARSING
+// ══════════════════════════════════════════════════════════════
+function handleFileUpload(e) { const f = e.target.files[0]; if(f) parseITMSALES(f); }
+
+const uploadZone = document.getElementById('upload-zone');
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault(); uploadZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0]; if(f) parseITMSALES(f);
+});
+
+function parseITMSALES(file) {
+  const uploadLoc = state.location; // capture NOW — before async, prevents race if user switches location mid-read
+  const statusEl = document.getElementById('upload-status');
+  const progressBar = document.getElementById('progress-bar');
+  const progressFill = document.getElementById('progress-fill');
+  statusEl.style.display = 'none';
+  progressBar.style.display = 'block';
+  progressFill.style.width = '10%';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      progressFill.style.width = '40%';
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array', cellDates:true});
+
+      // Accept 'ITMSALES', 'DBF FILE', 'DBF', or fall back to first sheet
+      const sheetName = wb.SheetNames.find(n => ['ITMSALES','DBF FILE','DBF'].includes(n.toUpperCase())) || wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, {raw:true});
+
+      progressFill.style.width = '60%';
+
+      if (!rows.length) { showToast('❌ The file appears to be empty.'); progressBar.style.display='none'; return; }
+
+      // Detect column names (might be DATE or Date, COUNTS or Counts, INV_NUM or Inv_Num)
+      const sampleRow = rows[0];
+      const findCol = (candidates) => candidates.find(c => sampleRow.hasOwnProperty(c));
+      const dateCol   = findCol(['DATE','Date','date']);
+      const invCol    = findCol(['INV_NUM','InvNum','INVNUM','Inv_Num','inv_num']);
+      const countsCol = findCol(['COUNTS','Counts','counts']);
+
+      if (!dateCol || !invCol || !countsCol) {
+        showToast(`❌ Could not find required columns. Found: ${Object.keys(sampleRow).join(', ')}`);
+        progressBar.style.display='none'; return;
+      }
+
+      // Aggregate oz per drink per date
+      const dailyOz = {};  // { 'YYYY-MM-DD': {marg:0, hornitos:0, ...} }
+
+      rows.forEach(row => {
+        const rawDate = row[dateCol];
+        if (!rawDate) return;
+
+        // Normalize date to YYYY-MM-DD
+        let dateStr;
+        if (typeof rawDate === 'string') {
+          dateStr = rawDate.slice(0, 10);
+        } else if (rawDate instanceof Date) {
+          dateStr = rawDate.toISOString().slice(0, 10);
+        } else {
+          dateStr = String(rawDate).slice(0, 10);
+        }
+
+        // Skip rows with invalid or unparseable dates (prevents "undefined" keys)
+        if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return;
+
+        const inv    = parseInt(row[invCol]);
+        const counts = parseInt(row[countsCol]) || 0;
+        if (isNaN(inv) || counts <= 0) return;
+
+        const drinkOz = INV_LOOKUP[inv];
+        if (!drinkOz) return;  // Not a tracked drink item
+
+        if (!dailyOz[dateStr]) {
+          dailyOz[dateStr] = {marg:0, hornitos:0, sangria:0, paradise:0, rotating:0, weekend:0, manhattan:0, zerop:0};
+        }
+        Object.entries(drinkOz).forEach(([drink, oz]) => {
+          if (dailyOz[dateStr][drink] !== undefined) dailyOz[dateStr][drink] += counts * oz;
+        });
+      });
+
+      progressFill.style.width = '85%';
+
+      const dates = Object.keys(dailyOz).sort();
+      if (!dates.length) {
+        showToast('⚠️ File was read but no tracked drink items were found. Check that this is the correct ITMSALES export.');
+        progressBar.style.display='none'; return;
+      }
+
+      // Save to the location that was active when upload started (uploadLoc, not state.location)
+      if (!state.locations[uploadLoc]) state.locations[uploadLoc] = emptyLocData();
+      const ld = state.locations[uploadLoc];
+      ld.dbfDailyOz    = dailyOz;
+      ld.dbfUploadDate = new Date().toLocaleDateString();
+      ld.dbfFileName   = file.name;
+      ld.dbfDateRange  = {from: dates[0], to: dates[dates.length-1]};
+      ld.refDateOverride = null; // reset any manual override on fresh upload
+      saveState(state);
+
+      progressFill.style.width = '100%';
+      setTimeout(() => { progressBar.style.display='none'; progressFill.style.width='0%'; }, 600);
+
+      // Show upload status
+      statusEl.style.display = 'block';
+      statusEl.innerHTML = `<span class="status-dot dot-ok"></span>
+        <strong>${uploadLoc} — Loaded:</strong> ${file.name} &nbsp;|&nbsp;
+        <strong>Date range:</strong> ${dates[0]} → ${dates[dates.length-1]} &nbsp;|&nbsp;
+        <strong>${dates.length}</strong> days of sales data`;
+
+      // Show date summary table
+      showDateSummary(dailyOz, dates);
+
+      renderDrinkInputs();
+      showToast(`✅ ${uploadLoc} DBF loaded — ${dates.length} days of data (${dates[0]} to ${dates[dates.length-1]})`);
+
+    } catch(err) {
+      showToast('❌ Error reading file: ' + err.message);
+      progressBar.style.display='none';
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function showDateSummary(dailyOz, dates) {
+  const div = document.getElementById('dbf-date-summary');
+  const drinks = state.drinks;
+  let html = `<div class="card" style="margin-top:0">
+    <h2>📅 Data Available by Day (Last 30 Days)</h2>
+    <p class="hint" style="margin-bottom:12px">Tonight the app will use the same day from last week. Only the last 30 days and active prep items are stored.</p>
+    <div style="overflow-x:auto"><table class="settings-table"><thead><tr>
+      <th>Date</th><th>Day</th>`;
+  drinks.forEach(d => {
+    const short = shortenDrinkName(d.name);
+    html += `<th style="font-size:11px">${short} (oz)</th>`;
+  });
+  html += `</tr></thead><tbody>`;
+  dates.slice(-30).forEach(d => {
+    const oz = dailyOz[d];
+    const day = DAYS[new Date(d+'T12:00:00').getDay()];
+    html += `<tr><td><strong>${d}</strong></td><td>${day}</td>`;
+    drinks.forEach(drink => {
+      const val = oz[drink.id] || 0;
+      html += `<td>${val.toFixed(0)}</td>`;
+    });
+    html += `</tr>`;
+  });
+  html += '</tbody></table></div></div>';
+  div.innerHTML = html;
+  div.style.display = 'block';
+}
+
+// ══════════════════════════════════════════════════════════════
+// SETTINGS PAGE
+// ══════════════════════════════════════════════════════════════
+function renderSettings() {
+  // Usage + Names
+  let html = `<table class="settings-table"><thead><tr>
+    <th style="width:40%">Drink Name</th>
+    <th>Last Usage (oz)</th><th>Last Usage (qt)</th>
+  </tr></thead><tbody>`;
+  const ref   = findRefDate(new Date());
+  const ozData = ref ? getUsageOzFromDBF(ref.date) : null;
+  state.drinks.forEach(d => {
+    const oz = ozData ? (ozData[d.id]||0) : d.usageOz;
+    const nameCell = d.fixed
+      ? `<td><span class="fixed-name">${d.name}</span><span class="fixed-tag">fixed</span></td>`
+      : `<td><input type="text" id="name-${d.col}" value="${d.name}" placeholder="Drink name"></td>`;
+    html += `<tr>${nameCell}
+      <td style="text-align:center;color:var(--muted)">${oz.toFixed(2)}</td>
+      <td style="text-align:center;color:var(--muted)">${(oz/32).toFixed(3)}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('usage-settings').innerHTML = html;
+
+  // Safety stock — admin only
+  if (!adminUnlocked) {
+    document.getElementById('safety-settings').innerHTML = `
+      <div class="admin-locked-box">
+        <div class="lock-icon">🔒</div>
+        <h3>Admin Access Required</h3>
+        <p>Safety stock values can only be changed by an admin.<br>Contact your manager to update these settings.</p>
+        <button class="btn btn-primary btn-sm" id="unlock-admin-btn">Unlock Admin</button>
+      </div>`;
+    document.getElementById('unlock-admin-btn').addEventListener('click', unlockAdmin);
+  } else {
+    let safetyHtml = `<div class="admin-unlocked-wrap">
+      <div class="admin-toolbar">
+        <span>🔓 Admin Mode Active — Safety Stock Unlocked</span>
+        <button class="btn-admin-pwd" id="change-pwd-btn">🔑 Change Password</button>
+        <button class="btn-admin-lock" id="lock-admin-btn">🔒 Lock Admin</button>
+      </div>
+      <table class="settings-table"><thead><tr><th>Day</th>`;
+    state.drinks.forEach(d => {
+      const short = shortenDrinkName(d.name);
+      safetyHtml += `<th id="safety-hdr-${d.col}" style="font-size:11px">${short}</th>`;
+    });
+    safetyHtml += '</tr></thead><tbody>';
+    DAYS.forEach((day, i) => {
+      safetyHtml += `<tr><td><strong>${day}</strong></td>`;
+      state.drinks.forEach((d, j) => {
+        safetyHtml += `<td><input type="number" id="safety-${i}-${j}" value="${state.safety[i][j]}" step="0.5" min="0"></td>`;
+      });
+      safetyHtml += '</tr>';
+    });
+    safetyHtml += '</tbody></table></div>';
+    document.getElementById('safety-settings').innerHTML = safetyHtml;
+    document.getElementById('lock-admin-btn').addEventListener('click', lockAdmin);
+    document.getElementById('change-pwd-btn').addEventListener('click', changeAdminPassword);
+  }
+
+  // Batch sizes — rotating and weekend are editable; all others are locked
+  const EDITABLE_BATCH_IDS = new Set(['rotating', 'weekend']);
+  let batchHtml = `<table class="settings-table"><thead><tr>
+    <th>Drink</th><th>Small (qt)</th><th>Medium (qt)</th><th>Large (qt)</th><th>XL (qt)</th>
+  </tr></thead><tbody>`;
+  state.drinks.forEach(d => {
+    const editable = EDITABLE_BATCH_IDS.has(d.id);
+    const rowCls   = editable ? 'batch-row-editable' : 'batch-row-locked';
+    batchHtml += `<tr class="${rowCls}"><td id="batch-name-${d.col}">${d.name}</td>`;
+    ['small','medium','large','xl'].forEach(sz => {
+      const val      = d.batches[sz] || '';
+      const disabled = editable ? '' : 'disabled';
+      batchHtml += `<td><input type="number" id="batch-${d.col}-${sz}" value="${val}" step="0.01" min="0" placeholder="—" ${disabled}></td>`;
+    });
+    batchHtml += '</tr>';
+  });
+  batchHtml += `</tbody></table>
+    <p class="hint" style="margin-top:10px">✏ Rotating Special and Weekend Special batch sizes can be adjusted as recipes change. All other sizes are fixed.</p>`;
+  document.getElementById('batch-settings').innerHTML = batchHtml;
+
+  // Wire up live name updates — attach AFTER innerHTML is set
+  state.drinks.forEach(d => {
+    if (d.fixed) return;
+    const input = document.getElementById('name-' + d.col);
+    if (input) input.addEventListener('input', function() {
+      liveUpdateDrinkName(d.col, this.value);
+    });
+  });
+}
+
+function shortenDrinkName(name) {
+  return name
+    .replace('Industrial Strength ', '')
+    .replace('Crathco ', '')
+    .replace('Stor N Pour ', '')
+    .split(' ').slice(0, 2).join(' ');
+}
+
+function liveUpdateDrinkName(col, newName) {
+  const drink = state.drinks.find(d => d.col === col);
+  if (!drink || drink.fixed || !newName.trim()) return;
+  drink.name = newName;
+
+  // Update safety stock column header
+  const safetyHdr = document.getElementById('safety-hdr-' + col);
+  if (safetyHdr) safetyHdr.textContent = shortenDrinkName(newName);
+
+  // Update batch sizes drink name cell
+  const batchName = document.getElementById('batch-name-' + col);
+  if (batchName) batchName.textContent = newName;
+
+  // Update tonight's prep drink card name
+  const prepName = document.getElementById('prep-name-' + col);
+  if (prepName) prepName.textContent = newName;
+}
+
+// ══════════════════════════════════════════════════════════════
+// ADMIN ACCESS
+// ══════════════════════════════════════════════════════════════
+function unlockAdmin() {
+  const pwd = prompt('Enter admin password:');
+  if (pwd === null) return; // user hit Cancel
+  if (pwd === state.adminPassword) {
+    adminUnlocked = true;
+    renderSettings();
+    showToast('🔓 Admin access granted');
+    if (state.adminPassword === 'admin') {
+      setTimeout(() => showToast('⚠️ Default password in use — change it under Safety Stock settings'), 4500);
+    }
+  } else {
+    showToast('❌ Incorrect password — access denied');
+  }
+}
+
+function lockAdmin() {
+  adminUnlocked = false;
+  renderSettings();
+  showToast('🔒 Admin access locked');
+}
+
+function changeAdminPassword() {
+  const current = prompt('Enter current password to confirm:');
+  if (current === null) return;
+  if (current !== state.adminPassword) { showToast('❌ Current password incorrect'); return; }
+  const next = prompt('Enter new password (minimum 4 characters):');
+  if (next === null) return;
+  if (next.trim().length < 4) { showToast('❌ Password must be at least 4 characters'); return; }
+  const confirm = prompt('Confirm new password:');
+  if (confirm !== next) { showToast('❌ Passwords do not match — not changed'); return; }
+  state.adminPassword = next.trim();
+  saveState(state);
+  showToast('✅ Admin password updated');
+}
+
+function saveSettings() {
+  state.drinks.forEach((d, j) => {
+    if (!d.fixed) {
+      const el = document.getElementById('name-'+d.col);
+      if (el && el.value.trim()) d.name = el.value.trim();
+    }
+    if (adminUnlocked) {
+      DAYS.forEach((_,i) => {
+        const v = parseFloat(document.getElementById(`safety-${i}-${j}`)?.value);
+        if (!isNaN(v)) state.safety[i][j] = v;
+      });
+    }
+    // Only save batch sizes for editable drinks (rotating + weekend)
+    if (['rotating','weekend'].includes(d.id)) {
+      ['small','medium','large','xl'].forEach(sz => {
+        const v = parseFloat(document.getElementById(`batch-${d.col}-${sz}`)?.value);
+        if (!isNaN(v) && v > 0) d.batches[sz] = v;
+        else delete d.batches[sz];
+      });
+    }
+  });
+  saveState(state);
+  renderDrinkInputs();
+  showToast('✅ Settings saved!');
+}
+
+function resetToDefaults() {
+  if (!confirm('Reset all drink names, safety stock, and batch sizes to defaults? DBF data will be kept.')) return;
+  state.drinks = JSON.parse(JSON.stringify(DEFAULT_DRINKS));
+  state.safety = JSON.parse(JSON.stringify(DEFAULT_SAFETY));
+  saveState(state);
+  renderSettings();
+  renderDrinkInputs();
+  showToast('↺ Reset to defaults');
+}
+
+// ══════════════════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.style.display='block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.style.display='none', 4000);
+}
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+const _now = new Date();
+document.getElementById('header-date').textContent =
+  _now.toLocaleDateString('en-US', {weekday:'long', month:'short', day:'numeric'});
+
+const _loc = state.location || 'WG';
+document.getElementById('location-select').value = _loc;
+document.getElementById('app-title').textContent = _loc + ' Daily Bar Prep';
+document.title = _loc + ' Daily Bar Prep';
+
+renderDrinkInputs();
+
+// Restore upload badge on upload page for the active location
+function restoreUploadStatus() {
+  const ld = locData();
+  const el = document.getElementById('upload-status');
+  const summaryDiv = document.getElementById('dbf-date-summary');
+  if (!el) return;
+  if (ld.dbfFileName) {
+    const dates = Object.keys(ld.dbfDailyOz).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+    el.style.display = 'block';
+    el.innerHTML = `<span class="status-dot dot-ok"></span>
+      <strong>${state.location} — Loaded:</strong> ${ld.dbfFileName} &nbsp;|&nbsp;
+      <strong>Date range:</strong> ${ld.dbfDateRange?.from} → ${ld.dbfDateRange?.to} &nbsp;|&nbsp;
+      <strong>${dates.length}</strong> days of sales data`;
+    if (summaryDiv) showDateSummary(ld.dbfDailyOz, dates);
+  } else {
+    el.style.display = 'none';
+    if (summaryDiv) summaryDiv.style.display = 'none';
+  }
+}
+restoreUploadStatus();
+</script>
+</body>
+</html>
