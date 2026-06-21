@@ -523,12 +523,20 @@ function saveState(s) {
 let adminUnlocked = false;
 
 function emptyLocData() {
-  return { dbfDailyOz: {}, dbfUploadDate: null, dbfFileName: null, dbfDateRange: null, refDateOverride: null, lastInventory: {} };
+  return { dbfDailyOz: {}, dbfUploadDate: null, dbfFileName: null, dbfDateRange: null, refDateOverride: null, lastInventory: {},
+           safety: JSON.parse(JSON.stringify(DEFAULT_SAFETY)) };
 }
 function buildState(saved) {
   if (saved) {
     if (!saved.locations) saved.locations = {};
-    LOCATIONS.forEach(loc => { if (!saved.locations[loc]) saved.locations[loc] = emptyLocData(); });
+    LOCATIONS.forEach(loc => {
+      if (!saved.locations[loc]) {
+        saved.locations[loc] = emptyLocData();
+      } else if (!saved.locations[loc].safety) {
+        // Migration: copy the old global safety into each location that doesn't have its own yet
+        saved.locations[loc].safety = JSON.parse(JSON.stringify(saved.safety || DEFAULT_SAFETY));
+      }
+    });
     if (!saved.adminPassword) saved.adminPassword = 'admin';
     return saved;
   }
@@ -536,7 +544,6 @@ function buildState(saved) {
   LOCATIONS.forEach(loc => { locations[loc] = emptyLocData(); });
   return {
     drinks: JSON.parse(JSON.stringify(DEFAULT_DRINKS)),
-    safety: JSON.parse(JSON.stringify(DEFAULT_SAFETY)),
     location: 'WG',
     locations,
     adminPassword: 'admin',
@@ -769,7 +776,7 @@ function clearInputs() {
 function calculate() {
   const today   = new Date();
   const dow     = today.getDay();
-  const safety  = state.safety[dow];
+  const safety  = locData().safety[dow];
   const ref     = findRefDate(today);
   const ozData  = ref ? getUsageOzFromDBF(ref.date) : null;
 
@@ -1119,7 +1126,7 @@ function renderSettings() {
     DAYS.forEach((day, i) => {
       safetyHtml += `<tr><td><strong>${day}</strong></td>`;
       state.drinks.forEach((d, j) => {
-        safetyHtml += `<td><input type="number" id="safety-${i}-${j}" value="${state.safety[i][j]}" step="0.5" min="0"></td>`;
+        safetyHtml += `<td><input type="number" id="safety-${i}-${j}" value="${locData().safety[i][j]}" step="0.5" min="0"></td>`;
       });
       safetyHtml += '</tr>';
     });
@@ -1232,7 +1239,7 @@ function saveSettings() {
     if (adminUnlocked) {
       DAYS.forEach((_,i) => {
         const v = parseFloat(document.getElementById(`safety-${i}-${j}`)?.value);
-        if (!isNaN(v)) state.safety[i][j] = v;
+        if (!isNaN(v)) locData().safety[i][j] = v;
       });
     }
     // Only save batch sizes for editable drinks (rotating + weekend)
@@ -1252,7 +1259,7 @@ function saveSettings() {
 function resetToDefaults() {
   if (!confirm('Reset all drink names, safety stock, and batch sizes to defaults? DBF data will be kept.')) return;
   state.drinks = JSON.parse(JSON.stringify(DEFAULT_DRINKS));
-  state.safety = JSON.parse(JSON.stringify(DEFAULT_SAFETY));
+  locData().safety = JSON.parse(JSON.stringify(DEFAULT_SAFETY));
   saveState(state);
   renderSettings();
   renderDrinkInputs();
