@@ -500,8 +500,8 @@ const DEFAULT_DRINKS = [
   {col:'J', id:'manhattan', name:'Stor N Pour Manhattan Craft',   fixed:false, usageOz:0, batches:{small:1.69, medium:3.38, large:6.75}},
   {col:'K', id:'zerop',     name:'Machine Zero / Low Proof',      fixed:false, usageOz:0, batches:{large:8.59}},
   // ── CPT-only drinks ──────────────────────────────────────────
-  {col:'L', id:'maitai',    name:'Crathco Mai Tai Swirl',         fixed:false, usageOz:0, batches:{small:2.69, medium:5.38, large:10.75}, locFilter:['CPT']},
-  {col:'M', id:'paloma',    name:'Crathco Paloma Swirl',          fixed:false, usageOz:0, batches:{small:2.69, medium:5.38, large:10.75}, locFilter:['CPT']},
+  {col:'L', id:'maitai',    name:'Crathco Mai Tai Swirl',         fixed:false, usageOz:0, batches:{small:2.06, medium:4.13, large:8.25}, locFilter:['CPT']},
+  {col:'M', id:'paloma',    name:'Crathco Guava Paloma Swirl',    fixed:false, usageOz:0, batches:{small:1.56, medium:3.12, large:6.25}, locFilter:['CPT']},
 ];
 
 // Safety stock by day of week (0=Sun…6=Sat), one per drink in DEFAULT_DRINKS order
@@ -575,8 +575,15 @@ function buildState(saved) {
     // (happens when new drinks are added after state was first saved)
     if (!saved.drinks) saved.drinks = [];
     DEFAULT_DRINKS.forEach(def => {
-      if (!saved.drinks.find(d => d.id === def.id)) {
+      const existing = saved.drinks.find(d => d.id === def.id);
+      if (!existing) {
         saved.drinks.push(JSON.parse(JSON.stringify(def)));
+      } else if (def.locFilter) {
+        // Location-specific drinks are locked in the UI, so always keep their
+        // batches and name in sync with DEFAULT_DRINKS (picks up code updates)
+        existing.batches   = JSON.parse(JSON.stringify(def.batches));
+        existing.name      = def.name;
+        existing.locFilter = def.locFilter;
       }
     });
     LOCATIONS.forEach(loc => {
