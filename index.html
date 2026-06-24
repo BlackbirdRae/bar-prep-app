@@ -435,6 +435,38 @@ const ITEM_DRINK_MAP = [
   {invNums:[4554],                drinkOz:{marg:10.75}},
   // HM Gran Centenario Raspberry
   {invNums:[4555],                drinkOz:{marg:9.25}},
+
+  // ── CPT-only: Mai Tai Swirl ───────────────────────────────────
+  // 8oz Mai Tai Swirl (Restaurant: 1909, Bar: 1959)
+  {invNums:[1909,1959],           drinkOz:{marg:6,    maitai:2}},
+  // 12oz Mai Tai Swirl (Restaurant: 4023, TT: 4826 | Bar: 4229, TT: 4932)
+  {invNums:[4023,4826,4229,4932], drinkOz:{marg:9,    maitai:3}},
+  // 16oz Mai Tai Swirl (Restaurant: 4024, TT: 4827 | Bar: 4230, TT: 4933)
+  {invNums:[4024,4827,4230,4933], drinkOz:{marg:12,   maitai:4}},
+  // 12oz Mai Tai on the Rocks (Restaurant: 4751 | Bar: 4761)
+  {invNums:[4751,4761],           drinkOz:{maitai:9}},
+  // 16oz Mai Tai on the Rocks (Restaurant: 4752 | Bar: 4762)
+  {invNums:[4752,4762],           drinkOz:{maitai:13}},
+  // 12oz Mai Tai on the Rocks No Ice (Restaurant: 4753 | Bar: 4763)
+  {invNums:[4753,4763],           drinkOz:{maitai:15.5}},
+  // 16oz Mai Tai on the Rocks No Ice (Restaurant: 4754 | Bar: 4764)
+  {invNums:[4754,4764],           drinkOz:{maitai:15.5}},
+
+  // ── CPT-only: Paloma Swirl ────────────────────────────────────
+  // 8oz Paloma Swirl (Restaurant: 1910, Bar: 1960)
+  {invNums:[1910,1960],           drinkOz:{marg:6,    paloma:2}},
+  // 12oz Paloma Swirl (Restaurant: 4032, TT: 4829 | Bar: 4238, TT: 4935)
+  {invNums:[4032,4829,4238,4935], drinkOz:{marg:9,    paloma:3}},
+  // 16oz Paloma Swirl (Restaurant: 4033, TT: 4830 | Bar: 4239, TT: 4936)
+  {invNums:[4033,4830,4239,4936], drinkOz:{marg:12,   paloma:4}},
+  // 12oz Paloma on the Rocks (Restaurant: 4756 | Bar: 4766)
+  {invNums:[4756,4766],           drinkOz:{paloma:9}},
+  // 16oz Paloma on the Rocks (Restaurant: 4757 | Bar: 4767)
+  {invNums:[4757,4767],           drinkOz:{paloma:13}},
+  // 12oz Paloma on the Rocks No Ice (Restaurant: 4758 | Bar: 4768)
+  {invNums:[4758,4768],           drinkOz:{paloma:15.5}},
+  // 16oz Paloma on the Rocks No Ice (Restaurant: 4759 | Bar: 4769)
+  {invNums:[4759,4769],           drinkOz:{paloma:15.5}},
 ];
 
 // Build fast lookup: invNum → drinkOz
@@ -446,8 +478,14 @@ ITEM_DRINK_MAP.forEach(({invNums, drinkOz}) => {
 // Map drink IDs to DRINKS array columns
 const DRINK_ID_TO_COL = {
   marg:'C', hornitos:'D', sangria:'E', paradise:'F',
-  rotating:'G', weekend:'I', manhattan:'J', zerop:'K'
+  rotating:'G', weekend:'I', manhattan:'J', zerop:'K',
+  maitai:'L', paloma:'M'
 };
+
+// Returns only the drinks active for the current location
+function activeDrinks() {
+  return state.drinks.filter(d => !d.locFilter || d.locFilter.includes(state.location));
+}
 
 // ══════════════════════════════════════════════════════════════
 // DEFAULT DRINK CONFIG
@@ -461,17 +499,21 @@ const DEFAULT_DRINKS = [
   {col:'I', id:'weekend',   name:'Stor N Pour Weekend Special',   fixed:false, usageOz:0, batches:{small:1.51, medium:3.03, large:6.06}},
   {col:'J', id:'manhattan', name:'Stor N Pour Manhattan Craft',   fixed:false, usageOz:0, batches:{small:1.69, medium:3.38, large:6.75}},
   {col:'K', id:'zerop',     name:'Machine Zero / Low Proof',      fixed:false, usageOz:0, batches:{large:8.59}},
+  // ── CPT-only drinks ──────────────────────────────────────────
+  {col:'L', id:'maitai',    name:'Crathco Mai Tai Swirl',         fixed:false, usageOz:0, batches:{small:2.69, medium:5.38, large:10.75}, locFilter:['CPT']},
+  {col:'M', id:'paloma',    name:'Crathco Paloma Swirl',          fixed:false, usageOz:0, batches:{small:2.69, medium:5.38, large:10.75}, locFilter:['CPT']},
 ];
 
 // Safety stock by day of week (0=Sun…6=Sat), one per drink in DEFAULT_DRINKS order
+// Last two columns (maitai, paloma) are CPT-only — other locations store 0 there
 const DEFAULT_SAFETY = [
-  [69.36, 4, 4, 4, 4, 0, 1, 6], // Sun
-  [69.36, 4, 4, 4, 4, 0, 1, 6], // Mon
-  [69.36, 4, 4, 4, 4, 0, 1, 6], // Tue
-  [69.36, 4, 4, 4, 4, 0, 1, 6], // Wed
-  [69.36, 4, 4, 4, 4, 0, 1, 6], // Thu
-  [69.36, 4, 4, 4, 4, 0, 1, 6], // Fri
-  [69.36, 4, 4, 4, 4, 0, 1, 6], // Sat
+  [69.36, 4, 4, 4, 4, 0, 1, 6, 0, 0], // Sun
+  [69.36, 4, 4, 4, 4, 0, 1, 6, 0, 0], // Mon
+  [69.36, 4, 4, 4, 4, 0, 1, 6, 0, 0], // Tue
+  [69.36, 4, 4, 4, 4, 0, 1, 6, 0, 0], // Wed
+  [69.36, 4, 4, 4, 4, 0, 1, 6, 0, 0], // Thu
+  [69.36, 4, 4, 4, 4, 0, 1, 6, 0, 0], // Fri
+  [69.36, 4, 4, 4, 4, 0, 1, 6, 0, 0], // Sat
 ];
 
 const LOCATIONS    = ['WG','BV','CPT','CMP'];
@@ -529,12 +571,25 @@ function emptyLocData() {
 function buildState(saved) {
   if (saved) {
     if (!saved.locations) saved.locations = {};
+    // Migration: add any drinks from DEFAULT_DRINKS missing from saved state
+    // (happens when new drinks are added after state was first saved)
+    if (!saved.drinks) saved.drinks = [];
+    DEFAULT_DRINKS.forEach(def => {
+      if (!saved.drinks.find(d => d.id === def.id)) {
+        saved.drinks.push(JSON.parse(JSON.stringify(def)));
+      }
+    });
     LOCATIONS.forEach(loc => {
       if (!saved.locations[loc]) {
         saved.locations[loc] = emptyLocData();
       } else if (!saved.locations[loc].safety) {
         // Migration: copy the old global safety into each location that doesn't have its own yet
         saved.locations[loc].safety = JSON.parse(JSON.stringify(saved.safety || DEFAULT_SAFETY));
+      }
+      // Migration: pad safety rows to match current DEFAULT_DRINKS length (in case new drinks were added)
+      const targetLen = DEFAULT_DRINKS.length;
+      if (saved.locations[loc].safety) {
+        saved.locations[loc].safety.forEach(row => { while (row.length < targetLen) row.push(0); });
       }
     });
     if (!saved.adminPassword) saved.adminPassword = 'admin';
@@ -745,7 +800,7 @@ function renderDrinkInputs() {
   const ref = findRefDate(new Date());
   const ozData = ref ? getUsageOzFromDBF(ref.date) : null;
 
-  state.drinks.forEach(d => {
+  activeDrinks().forEach(d => {
     const last = locData().lastInventory[d.col] ?? '';
     const oz   = ozData ? (ozData[d.id] || 0) : d.usageOz;
     const qt   = (oz / 32).toFixed(2);
@@ -767,7 +822,7 @@ function renderDrinkInputs() {
 }
 
 function clearInputs() {
-  state.drinks.forEach(d => { const el = document.getElementById('inv-'+d.col); if(el) el.value=''; });
+  activeDrinks().forEach(d => { const el = document.getElementById('inv-'+d.col); if(el) el.value=''; });
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -780,7 +835,7 @@ function calculate() {
   const ref     = findRefDate(today);
   const ozData  = ref ? getUsageOzFromDBF(ref.date) : null;
 
-  const results = state.drinks.map((d, i) => {
+  const results = activeDrinks().map((d, i) => {
     const onHand      = parseFloat(document.getElementById('inv-'+d.col).value) || 0;
     const rawOz       = ozData ? (ozData[d.id] || 0) : d.usageOz;
     const usageQts    = rawOz / 32;
@@ -998,7 +1053,7 @@ function parseITMSALES(file) {
         if (!drinkOz) return;  // Not a tracked drink item
 
         if (!dailyOz[dateStr]) {
-          dailyOz[dateStr] = {marg:0, hornitos:0, sangria:0, paradise:0, rotating:0, weekend:0, manhattan:0, zerop:0};
+          dailyOz[dateStr] = {marg:0, hornitos:0, sangria:0, paradise:0, rotating:0, weekend:0, manhattan:0, zerop:0, maitai:0, paloma:0};
         }
         Object.entries(drinkOz).forEach(([drink, oz]) => {
           if (dailyOz[dateStr][drink] !== undefined) dailyOz[dateStr][drink] += counts * oz;
@@ -1050,7 +1105,7 @@ function parseITMSALES(file) {
 
 function showDateSummary(dailyOz, dates) {
   const div = document.getElementById('dbf-date-summary');
-  const drinks = state.drinks;
+  const drinks = activeDrinks();
   let html = `<div class="card" style="margin-top:0">
     <h2>📅 Data Available by Day (Last 30 Days)</h2>
     <p class="hint" style="margin-bottom:12px">Tonight the app will use the same day from last week. Only the last 30 days and active prep items are stored.</p>
@@ -1087,7 +1142,7 @@ function renderSettings() {
   </tr></thead><tbody>`;
   const ref   = findRefDate(new Date());
   const ozData = ref ? getUsageOzFromDBF(ref.date) : null;
-  state.drinks.forEach(d => {
+  activeDrinks().forEach(d => {
     const oz = ozData ? (ozData[d.id]||0) : d.usageOz;
     const nameCell = d.fixed
       ? `<td><span class="fixed-name">${d.name}</span><span class="fixed-tag">fixed</span></td>`
@@ -1118,7 +1173,7 @@ function renderSettings() {
         <button class="btn-admin-lock" id="lock-admin-btn">🔒 Lock Admin</button>
       </div>
       <table class="settings-table"><thead><tr><th>Day</th>`;
-    state.drinks.forEach(d => {
+    activeDrinks().forEach(d => {
       const short = shortenDrinkName(d.name);
       safetyHtml += `<th id="safety-hdr-${d.col}" style="font-size:11px">${short}</th>`;
     });
@@ -1126,6 +1181,7 @@ function renderSettings() {
     DAYS.forEach((day, i) => {
       safetyHtml += `<tr><td><strong>${day}</strong></td>`;
       state.drinks.forEach((d, j) => {
+        if (d.locFilter && !d.locFilter.includes(state.location)) return; // skip inactive
         safetyHtml += `<td><input type="number" id="safety-${i}-${j}" value="${locData().safety[i][j]}" step="0.5" min="0"></td>`;
       });
       safetyHtml += '</tr>';
@@ -1141,7 +1197,7 @@ function renderSettings() {
   let batchHtml = `<table class="settings-table"><thead><tr>
     <th>Drink</th><th>Small (qt)</th><th>Medium (qt)</th><th>Large (qt)</th><th>XL (qt)</th>
   </tr></thead><tbody>`;
-  state.drinks.forEach(d => {
+  activeDrinks().forEach(d => {
     const editable = EDITABLE_BATCH_IDS.has(d.id);
     const rowCls   = editable ? 'batch-row-editable' : 'batch-row-locked';
     batchHtml += `<tr class="${rowCls}"><td id="batch-name-${d.col}">${d.name}</td>`;
@@ -1157,7 +1213,7 @@ function renderSettings() {
   document.getElementById('batch-settings').innerHTML = batchHtml;
 
   // Wire up live name updates — attach AFTER innerHTML is set
-  state.drinks.forEach(d => {
+  activeDrinks().forEach(d => {
     if (d.fixed) return;
     const input = document.getElementById('name-' + d.col);
     if (input) input.addEventListener('input', function() {
@@ -1232,6 +1288,8 @@ function changeAdminPassword() {
 
 function saveSettings() {
   state.drinks.forEach((d, j) => {
+    // Skip drinks not active for this location
+    if (d.locFilter && !d.locFilter.includes(state.location)) return;
     if (!d.fixed) {
       const el = document.getElementById('name-'+d.col);
       if (el && el.value.trim()) d.name = el.value.trim();
