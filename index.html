@@ -125,6 +125,38 @@
   }
   .batch-line.other { color: #999; font-size: 12px; }
 
+  /* ── Drink Manager Modal ──────────────────────────────────── */
+  .dm-overlay { position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px; }
+  .dm-modal { background:#fff;border-radius:10px;width:100%;max-width:720px;max-height:88vh;overflow-y:auto;padding:24px;position:relative;box-shadow:0 8px 40px rgba(0,0,0,.25); }
+  .dm-modal h2 { margin:0 0 4px;font-size:18px;color:var(--dark); }
+  .dm-modal .dm-subtitle { font-size:13px;color:var(--muted);margin-bottom:18px; }
+  .dm-close { position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:#999;line-height:1; }
+  .dm-section { font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border); }
+  .dm-drink-row { display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0; }
+  .dm-drink-name { flex:1;font-weight:500;font-size:14px; }
+  .dm-drink-meta { font-size:11px;color:#aaa;white-space:nowrap; }
+  .dm-btn-del { background:none;border:1px solid #e0c0c0;border-radius:4px;padding:3px 10px;cursor:pointer;color:#c0392b;font-size:12px;white-space:nowrap; }
+  .dm-btn-del:hover { background:#fef0f0; }
+  .dm-form { background:#fafafa;border:1px solid var(--border);border-radius:8px;padding:16px;margin-top:12px; }
+  .dm-form label { font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px; }
+  .dm-form input[type=text],.dm-form input[type=number],.dm-form select { border:1px solid var(--border);border-radius:4px;padding:6px 10px;font-size:13px;width:100%;box-sizing:border-box; }
+  .dm-form input:focus,.dm-form select:focus { outline:none;border-color:var(--red); }
+  .dm-form-row { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px; }
+  .dm-form-row4 { display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px; }
+  .dm-inv-table { width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px; }
+  .dm-inv-table th { background:#f0f0f0;padding:5px 8px;text-align:left;font-size:11px;font-weight:600;color:#666; }
+  .dm-inv-table td { padding:4px 4px;border-bottom:1px solid #eee;vertical-align:middle; }
+  .dm-inv-table input { border:1px solid #ddd;border-radius:3px;padding:4px 6px;font-size:12px;width:100%; }
+  .dm-inv-table .inv-num-input { width:100%; }
+  .dm-inv-table .oz-input { width:100%;text-align:center; }
+  .dm-inv-rm { background:none;border:none;color:#c0392b;cursor:pointer;font-size:14px;padding:0 4px; }
+  .dm-btn-add-row { background:none;border:1px dashed #bbb;border-radius:4px;padding:5px 12px;font-size:12px;color:#888;cursor:pointer;margin-bottom:12px; }
+  .dm-btn-add-row:hover { border-color:#999;color:#555; }
+  .dm-btn-submit { background:var(--red);color:#fff;border:none;border-radius:6px;padding:9px 20px;font-size:14px;font-weight:600;cursor:pointer;width:100%; }
+  .dm-btn-submit:hover { opacity:.9; }
+  .dm-manage-btn { background:none;border:1px solid var(--border);border-radius:5px;padding:5px 12px;font-size:12px;cursor:pointer;color:var(--dark);margin-left:10px;vertical-align:middle; }
+  .dm-manage-btn:hover { background:#f5f5f5; }
+
   /* ── Batch size locked/editable rows ─────────────────────── */
   .batch-row-locked input {
     background: #f4f4f4; color: #aaa; border-color: #e0e0e0;
@@ -134,6 +166,7 @@
   .batch-row-editable td:first-child::after {
     content: ' ✏'; font-size: 11px; color: var(--gold); font-weight: bold;
   }
+  .batch-row-admin { background: #f0f8ff; border-left: 3px solid var(--gold); }
 
   /* ── Upload ──────────────────────────────────────────────── */
   .upload-zone { border: 3px dashed var(--border); border-radius: var(--radius); padding: 40px; text-align: center; cursor: pointer; transition: all 0.15s; background: #fafafa; }
@@ -462,21 +495,7 @@ const ITEM_DRINK_MAP = [
   // 16oz Mai Tai on the Rocks No Ice (Restaurant: 4754 | Bar: 4764)
   {invNums:[4754,4764],           drinkOz:{maitai:15.5}},
 
-  // ── CPT-only: Paloma Swirl ────────────────────────────────────
-  // 8oz Paloma Swirl (Restaurant: 1910, Bar: 1960)
-  {invNums:[1910,1960],           drinkOz:{marg:6,    paloma:2}},
-  // 12oz Paloma Swirl (Restaurant: 4032, TT: 4829 | Bar: 4238, TT: 4935)
-  {invNums:[4032,4829,4238,4935], drinkOz:{marg:9,    paloma:3}},
-  // 16oz Paloma Swirl (Restaurant: 4033, TT: 4830 | Bar: 4239, TT: 4936)
-  {invNums:[4033,4830,4239,4936], drinkOz:{marg:12,   paloma:4}},
-  // 12oz Paloma on the Rocks (Restaurant: 4756 | Bar: 4766)
-  {invNums:[4756,4766],           drinkOz:{paloma:9}},
-  // 16oz Paloma on the Rocks (Restaurant: 4757 | Bar: 4767)
-  {invNums:[4757,4767],           drinkOz:{paloma:13}},
-  // 12oz Paloma on the Rocks No Ice (Restaurant: 4758 | Bar: 4768)
-  {invNums:[4758,4768],           drinkOz:{paloma:15.5}},
-  // 16oz Paloma on the Rocks No Ice (Restaurant: 4759 | Bar: 4769)
-  {invNums:[4759,4769],           drinkOz:{paloma:15.5}},
+  // Paloma Swirl removed — CPT no longer selling this product
 ];
 
 // Build fast lookup: invNum → drinkOz
@@ -489,7 +508,7 @@ ITEM_DRINK_MAP.forEach(({invNums, drinkOz}) => {
 const DRINK_ID_TO_COL = {
   marg:'C', hornitos:'D', sangria:'E', paradise:'F',
   rotating:'G', weekend:'I', manhattan:'J', zerop:'K',
-  maitai:'L', paloma:'M'
+  maitai:'L'
 };
 
 // Returns only the drinks active for the current location
@@ -511,19 +530,18 @@ const DEFAULT_DRINKS = [
   {col:'K', id:'zerop',     name:'Machine Zero / Low Proof',      fixed:false, usageOz:0, batches:{large:8.59}},
   // ── CPT-only drinks ──────────────────────────────────────────
   {col:'L', id:'maitai',    name:'Crathco Mai Tai Swirl',         fixed:false, usageOz:0, batches:{small:2.06, medium:4.13, large:8.25}, locFilter:['CPT']},
-  {col:'M', id:'paloma',    name:'Crathco Guava Paloma Swirl',    fixed:false, usageOz:0, batches:{small:1.56, medium:3.12, large:6.25}, locFilter:['CPT']},
 ];
 
 // Safety stock by day of week (0=Sun…6=Sat), one per drink in DEFAULT_DRINKS order
-// Last two columns (maitai, paloma) are CPT-only — other locations store 0 there
+// Last column (maitai) is CPT-only — other locations store 0 there
 const DEFAULT_SAFETY = [
-  [69.36, 4, 4, 4, 4, 0, 1, 6, 0, 0], // Sun
-  [69.36, 4, 4, 4, 4, 0, 1, 6, 0, 0], // Mon
-  [69.36, 4, 4, 4, 4, 0, 1, 6, 0, 0], // Tue
-  [69.36, 4, 4, 4, 4, 0, 1, 6, 0, 0], // Wed
-  [69.36, 4, 4, 4, 4, 0, 1, 6, 0, 0], // Thu
-  [69.36, 4, 4, 4, 4, 0, 1, 6, 0, 0], // Fri
-  [69.36, 4, 4, 4, 4, 0, 1, 6, 0, 0], // Sat
+  [69.36, 4, 4, 4, 4, 0, 1, 6, 0], // Sun
+  [69.36, 4, 4, 4, 4, 0, 1, 6, 0], // Mon
+  [69.36, 4, 4, 4, 4, 0, 1, 6, 0], // Tue
+  [69.36, 4, 4, 4, 4, 0, 1, 6, 0], // Wed
+  [69.36, 4, 4, 4, 4, 0, 1, 6, 0], // Thu
+  [69.36, 4, 4, 4, 4, 0, 1, 6, 0], // Fri
+  [69.36, 4, 4, 4, 4, 0, 1, 6, 0], // Sat
 ];
 
 const LOCATIONS    = ['WG','BV','CPT','CMP'];
@@ -604,6 +622,10 @@ function buildState(saved) {
         existing.name = def.name;
       }
     });
+    // Migration: remove any retired drinks that no longer exist in DEFAULT_DRINKS
+    const activeIds = new Set(DEFAULT_DRINKS.map(d => d.id));
+    if (saved.drinks) saved.drinks = saved.drinks.filter(d => activeIds.has(d.id));
+
     LOCATIONS.forEach(loc => {
       if (!saved.locations[loc]) {
         saved.locations[loc] = emptyLocData();
@@ -631,6 +653,7 @@ function buildState(saved) {
 }
 function getState() { return buildState(loadLocalState()); }
 let state = getState();
+rebuildCustomLookup(); // activate any saved custom INV_NUM mappings
 
 // ── Load from cloud on startup, then subscribe to live changes ──────────────
 (async () => {
@@ -1078,10 +1101,14 @@ function parseITMSALES(file) {
         if (!drinkOz) return;  // Not a tracked drink item
 
         if (!dailyOz[dateStr]) {
-          dailyOz[dateStr] = {marg:0, hornitos:0, sangria:0, paradise:0, rotating:0, weekend:0, manhattan:0, zerop:0, maitai:0, paloma:0};
+          // Build dynamically so any custom drink IDs are included
+          dailyOz[dateStr] = {};
+          state.drinks.forEach(d => { dailyOz[dateStr][d.id] = 0; });
         }
         Object.entries(drinkOz).forEach(([drink, oz]) => {
+          if (drink === '_custom') return; // skip internal flag
           if (dailyOz[dateStr][drink] !== undefined) dailyOz[dateStr][drink] += counts * oz;
+          else dailyOz[dateStr][drink] = counts * oz; // handles custom drink IDs
         });
       });
 
@@ -1157,11 +1184,237 @@ function showDateSummary(dailyOz, dates) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// DRINK MANAGER — add/remove drinks + custom INV_NUM mappings
+// ══════════════════════════════════════════════════════════════
+
+function nextDrinkCol() {
+  const used = new Set(state.drinks.map(d => d.col));
+  for (let c = 65; c <= 90; c++) {
+    const l = String.fromCharCode(c);
+    if (!used.has(l)) return l;
+  }
+  return 'X' + Date.now().toString(36);
+}
+
+function nextDrinkId() { return 'custom_' + Date.now().toString(36); }
+
+// Merge custom INV_NUM mappings from state.drinks into INV_LOOKUP
+function rebuildCustomLookup() {
+  // Remove previous custom entries
+  Object.keys(INV_LOOKUP).forEach(k => { if (INV_LOOKUP[k]?._custom) delete INV_LOOKUP[k]; });
+  state.drinks.forEach(d => {
+    if (!d.invMapping) return;
+    d.invMapping.forEach(group => {
+      const oz = {_custom: true};
+      if (group.margOz > 0)  oz.marg   = Number(group.margOz);
+      if (group.drinkOz > 0) oz[d.id]  = Number(group.drinkOz);
+      (group.invNums || []).forEach(n => {
+        const key = Number(n);
+        if (!isNaN(key) && !INV_LOOKUP[key]) INV_LOOKUP[key] = oz;
+      });
+    });
+  });
+}
+
+function openDrinkManager() {
+  if (document.getElementById('dm-overlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'dm-overlay';
+  overlay.className = 'dm-overlay';
+  overlay.innerHTML = `
+    <div class="dm-modal">
+      <button class="dm-close" onclick="closeDrinkManager()">✕</button>
+      <h2>🍹 Manage Drinks</h2>
+      <p class="dm-subtitle">Add or remove drinks from the prep sheet and configure which inventory numbers to pull from the DBF file.</p>
+
+      <div class="dm-section">Current Drinks</div>
+      <div id="dm-drink-list"></div>
+
+      <div class="dm-section" style="margin-top:24px">Add New Drink</div>
+      <div class="dm-form">
+        <div class="dm-form-row">
+          <div>
+            <label>Drink Name</label>
+            <input type="text" id="dm-name" placeholder="e.g. Crathco Hibiscus Swirl">
+          </div>
+          <div>
+            <label>Available At</label>
+            <select id="dm-loc">
+              <option value="">All Locations</option>
+              <option value="WG">WG only</option>
+              <option value="BV">BV only</option>
+              <option value="CPT">CPT only</option>
+              <option value="CMP">CMP only</option>
+            </select>
+          </div>
+        </div>
+        <label style="margin-bottom:6px;display:block">Batch Sizes (quarts)</label>
+        <div class="dm-form-row4" style="margin-bottom:16px">
+          <div><label>Small</label><input type="number" id="dm-bs-s" placeholder="—" step="0.01" min="0"></div>
+          <div><label>Medium</label><input type="number" id="dm-bs-m" placeholder="—" step="0.01" min="0"></div>
+          <div><label>Large</label><input type="number" id="dm-bs-l" placeholder="—" step="0.01" min="0"></div>
+          <div><label>XL</label><input type="number" id="dm-bs-xl" placeholder="—" step="0.01" min="0"></div>
+        </div>
+        <label style="margin-bottom:6px;display:block">INV Numbers & Oz Per Unit
+          <span style="font-weight:400;color:#999;font-size:11px"> — enter the POS inventory numbers and how many oz each contributes</span>
+        </label>
+        <table class="dm-inv-table">
+          <thead><tr>
+            <th style="width:28%">Label (size)</th>
+            <th style="width:36%">INV Numbers (comma-separated)</th>
+            <th style="width:16%">Marg oz</th>
+            <th style="width:16%">Drink oz</th>
+            <th style="width:4%"></th>
+          </tr></thead>
+          <tbody id="dm-inv-body">
+            ${dmInvRow('8oz', '', 6, 2)}
+            ${dmInvRow('12oz', '', 9, 3)}
+            ${dmInvRow('16oz', '', 12, 4)}
+          </tbody>
+        </table>
+        <button class="dm-btn-add-row" onclick="dmAddInvRow()">+ Add Size</button>
+        <button class="dm-btn-submit" onclick="dmSubmit()">✚ Add Drink to Prep Sheet</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeDrinkManager(); });
+  renderDmDrinkList();
+}
+
+function dmInvRow(label, nums, marg, drink) {
+  return `<tr>
+    <td><input type="text" class="inv-label" placeholder="${label}" value="${label}"></td>
+    <td><input type="text" class="inv-nums inv-num-input" placeholder="e.g. 1907, 1957" value="${nums}"></td>
+    <td><input type="number" class="inv-marg oz-input" placeholder="0" value="${marg}" step="0.5" min="0"></td>
+    <td><input type="number" class="inv-drink oz-input" placeholder="0" value="${drink}" step="0.5" min="0"></td>
+    <td><button class="dm-inv-rm" onclick="this.closest('tr').remove()" title="Remove row">✕</button></td>
+  </tr>`;
+}
+
+function dmAddInvRow() {
+  document.getElementById('dm-inv-body').insertAdjacentHTML('beforeend', dmInvRow('', '', 0, 0));
+}
+
+function renderDmDrinkList() {
+  const list = document.getElementById('dm-drink-list');
+  if (!list) return;
+  let html = '';
+  activeDrinks().forEach(d => {
+    const locLabel = d.locFilter ? `(${d.locFilter.join(',')})` : '(All)';
+    const invSummary = d.invMapping
+      ? d.invMapping.map(g => g.invNums.join(',')).filter(Boolean).join(' · ')
+      : '<span style="color:#bbb;font-size:11px">Hardcoded</span>';
+    const canRemove = !d.fixed;
+    const removeBtn = canRemove
+      ? `<button class="dm-btn-del" onclick="dmRemoveDrink('${d.col}')">Remove</button>` : '';
+    html += `<div class="dm-drink-row">
+      <div>
+        <div class="dm-drink-name">${d.name}</div>
+        <div class="dm-drink-meta">${locLabel} &nbsp;|&nbsp; INV: ${invSummary}</div>
+      </div>
+      ${removeBtn}
+    </div>`;
+  });
+  list.innerHTML = html || '<p style="color:#aaa;font-size:13px">No drinks configured.</p>';
+}
+
+function dmRemoveDrink(col) {
+  const drink = state.drinks.find(d => d.col === col);
+  if (!drink || drink.fixed) return;
+  if (!confirm(`Remove "${drink.name}" from the prep sheet? This cannot be undone.`)) return;
+  state.drinks = state.drinks.filter(d => d.col !== col);
+  // Rebuild safety arrays to match new drink count
+  const targetLen = state.drinks.length;
+  LOCATIONS.forEach(loc => {
+    if (state.locations[loc]?.safety) {
+      state.locations[loc].safety.forEach(row => { while (row.length < targetLen) row.push(0); });
+    }
+  });
+  rebuildCustomLookup();
+  saveState(state);
+  renderDmDrinkList();
+  renderDrinkInputs();
+  renderSettings();
+  showToast(`🗑 "${drink.name}" removed from prep sheet`);
+}
+
+function dmSubmit() {
+  const name = document.getElementById('dm-name').value.trim();
+  if (!name) { showToast('❌ Please enter a drink name'); return; }
+  const locVal = document.getElementById('dm-loc').value;
+  const batchS  = parseFloat(document.getElementById('dm-bs-s').value)  || null;
+  const batchM  = parseFloat(document.getElementById('dm-bs-m').value)  || null;
+  const batchL  = parseFloat(document.getElementById('dm-bs-l').value)  || null;
+  const batchXL = parseFloat(document.getElementById('dm-bs-xl').value) || null;
+  const batches = {};
+  if (batchS)  batches.small  = batchS;
+  if (batchM)  batches.medium = batchM;
+  if (batchL)  batches.large  = batchL;
+  if (batchXL) batches.xl     = batchXL;
+
+  // Collect INV mappings
+  const invMapping = [];
+  document.querySelectorAll('#dm-inv-body tr').forEach(row => {
+    const label   = row.querySelector('.inv-label')?.value.trim() || '';
+    const numsRaw = row.querySelector('.inv-nums')?.value || '';
+    const margOz  = parseFloat(row.querySelector('.inv-marg')?.value)  || 0;
+    const drinkOz = parseFloat(row.querySelector('.inv-drink')?.value) || 0;
+    const invNums = numsRaw.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+    if (invNums.length > 0) invMapping.push({ label, invNums, margOz, drinkOz });
+  });
+
+  const newDrink = {
+    col:       nextDrinkCol(),
+    id:        nextDrinkId(),
+    name,
+    fixed:     false,
+    usageOz:   0,
+    batches,
+    isCustom:  true,
+    invMapping,
+  };
+  if (locVal) newDrink.locFilter = [locVal];
+
+  state.drinks.push(newDrink);
+  // Add safety slot for new drink in all location safety arrays
+  LOCATIONS.forEach(loc => {
+    if (state.locations[loc]?.safety) {
+      state.locations[loc].safety.forEach(row => row.push(0));
+    }
+  });
+  rebuildCustomLookup();
+  saveState(state);
+  renderDmDrinkList();
+  renderDrinkInputs();
+  renderSettings();
+  // Reset form
+  document.getElementById('dm-name').value = '';
+  document.getElementById('dm-loc').value  = '';
+  ['dm-bs-s','dm-bs-m','dm-bs-l','dm-bs-xl'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('dm-inv-body').innerHTML =
+    dmInvRow('8oz','',6,2) + dmInvRow('12oz','',9,3) + dmInvRow('16oz','',12,4);
+  showToast(`✅ "${name}" added to the prep sheet`);
+}
+
+function closeDrinkManager() {
+  const el = document.getElementById('dm-overlay');
+  if (el) el.remove();
+}
+
+// ══════════════════════════════════════════════════════════════
 // SETTINGS PAGE
 // ══════════════════════════════════════════════════════════════
 function renderSettings() {
+  // Manage Drinks button — visible to admin only
+  const mgrBtn = adminUnlocked
+    ? `<button class="dm-manage-btn" onclick="openDrinkManager()">⚙ Manage Drinks</button>` : '';
+
   // Usage + Names
-  let html = `<table class="settings-table"><thead><tr>
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <span style="font-size:13px;color:var(--muted)">Edit drink names below. Industrial Strength Margarita is permanent.</span>
+    ${mgrBtn}
+  </div>
+  <table class="settings-table"><thead><tr>
     <th style="width:40%">Drink Name</th>
     <th>Last Usage (oz)</th><th>Last Usage (qt)</th>
   </tr></thead><tbody>`;
@@ -1197,35 +1450,39 @@ function renderSettings() {
         <button class="btn-admin-pwd" id="change-pwd-btn">🔑 Change Password</button>
         <button class="btn-admin-lock" id="lock-admin-btn">🔒 Lock Admin</button>
       </div>
-      <table class="settings-table"><thead><tr><th>Day</th>`;
+      <div style="overflow-x:auto">
+      <table class="settings-table safety-compact-table"><thead><tr><th>Day</th>`;
     activeDrinks().forEach(d => {
       const short = shortenDrinkName(d.name);
-      safetyHtml += `<th id="safety-hdr-${d.col}" style="font-size:11px">${short}</th>`;
+      safetyHtml += `<th id="safety-hdr-${d.col}" style="font-size:10px;white-space:nowrap;padding:6px 4px">${short}</th>`;
     });
     safetyHtml += '</tr></thead><tbody>';
     DAYS.forEach((day, i) => {
-      safetyHtml += `<tr><td><strong>${day}</strong></td>`;
+      safetyHtml += `<tr><td><strong style="font-size:12px">${DAYS_SHORT[i]}</strong></td>`;
       state.drinks.forEach((d, j) => {
         if (d.locFilter && !d.locFilter.includes(state.location)) return; // skip inactive
-        safetyHtml += `<td><input type="number" id="safety-${i}-${j}" value="${locData().safety[i][j]}" step="0.5" min="0"></td>`;
+        safetyHtml += `<td style="padding:4px"><input type="number" id="safety-${i}-${j}" value="${locData().safety[i][j]}" step="0.5" min="0" style="width:52px;padding:3px 4px;font-size:12px"></td>`;
       });
       safetyHtml += '</tr>';
     });
-    safetyHtml += '</tbody></table></div>';
+    safetyHtml += '</tbody></table></div></div>';
     document.getElementById('safety-settings').innerHTML = safetyHtml;
     document.getElementById('lock-admin-btn').addEventListener('click', lockAdmin);
     document.getElementById('change-pwd-btn').addEventListener('click', changeAdminPassword);
   }
 
-  // Batch sizes — rotating and weekend are editable; all others are locked
+  // Batch sizes — rotating/weekend always editable; others need admin unlock
   const EDITABLE_BATCH_IDS = new Set(['rotating', 'weekend']);
   let batchHtml = `<table class="settings-table"><thead><tr>
     <th>Drink</th><th>Small (qt)</th><th>Medium (qt)</th><th>Large (qt)</th><th>XL (qt)</th>
   </tr></thead><tbody>`;
   activeDrinks().forEach(d => {
-    const editable = EDITABLE_BATCH_IDS.has(d.id);
-    const rowCls   = editable ? 'batch-row-editable' : 'batch-row-locked';
-    batchHtml += `<tr class="${rowCls}"><td id="batch-name-${d.col}">${d.name}</td>`;
+    const alwaysEditable = EDITABLE_BATCH_IDS.has(d.id);
+    const editable = alwaysEditable || adminUnlocked;
+    const rowCls   = alwaysEditable ? 'batch-row-editable' : (adminUnlocked ? 'batch-row-admin' : 'batch-row-locked');
+    const lockTag  = (!alwaysEditable && !adminUnlocked)
+      ? ' <span style="font-size:10px;color:#bbb;vertical-align:middle">🔒</span>' : '';
+    batchHtml += `<tr class="${rowCls}"><td id="batch-name-${d.col}">${d.name}${lockTag}</td>`;
     ['small','medium','large','xl'].forEach(sz => {
       const val      = d.batches[sz] || '';
       const disabled = editable ? '' : 'disabled';
@@ -1233,8 +1490,11 @@ function renderSettings() {
     });
     batchHtml += '</tr>';
   });
+  const batchHint = adminUnlocked
+    ? '🔓 Admin mode — all batch sizes are editable.'
+    : '✏ Monthly Special and Seasonal are always editable for the team. 🔒 All other batch sizes require admin access.';
   batchHtml += `</tbody></table>
-    <p class="hint" style="margin-top:10px">✏ Rotating Special and Weekend Special batch sizes can be adjusted as recipes change. All other sizes are fixed.</p>`;
+    <p class="hint" style="margin-top:10px">${batchHint}</p>`;
   document.getElementById('batch-settings').innerHTML = batchHtml;
 
   // Wire up live name updates — attach AFTER innerHTML is set
@@ -1325,8 +1585,8 @@ function saveSettings() {
         if (!isNaN(v)) locData().safety[i][j] = v;
       });
     }
-    // Only save batch sizes for editable drinks (rotating + weekend)
-    if (['rotating','weekend'].includes(d.id)) {
+    // Save batch sizes for rotating/weekend always; all others when admin unlocked
+    if (['rotating','weekend'].includes(d.id) || adminUnlocked) {
       ['small','medium','large','xl'].forEach(sz => {
         const v = parseFloat(document.getElementById(`batch-${d.col}-${sz}`)?.value);
         if (!isNaN(v) && v > 0) d.batches[sz] = v;
